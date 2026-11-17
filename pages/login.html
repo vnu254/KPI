@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập - Hệ thống Quản lý Công việc Nội bộ</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">QL</div>
+      <h1 style="font-size: 19px; color: var(--navy-800);">HỆ THỐNG QUẢN LÝ CÔNG VIỆC</h1>
+      <p style="color: var(--slate-500); font-size: 13px; margin-top: 4px;">Đăng nhập bằng tài khoản nội bộ đơn vị</p>
+    </div>
+
+    <!-- FORM 1: ĐĂNG NHẬP -->
+    <form id="form-login">
+      <div class="form-group">
+        <label class="form-label">Địa chỉ Email</label>
+        <input type="email" id="login-email" class="form-control" placeholder="admin@donvi.vn" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu</label>
+        <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+      </div>
+      <button type="submit" id="btn-submit-login" class="btn btn-primary" style="width: 100%; padding: 11px; margin-top: 6px;">
+        Đăng nhập Hệ thống
+      </button>
+      <div style="display: flex; justify-content: space-between; margin-top: 14px; font-size: 13px;">
+        <a href="#" id="link-forgot-password" style="color: var(--blue-600); text-decoration: none; font-weight: 600;">Quên mật khẩu?</a>
+        <a href="#" id="link-config-api" style="color: var(--slate-500); text-decoration: none;">Cấu hình API URL</a>
+      </div>
+    </form>
+
+    <!-- FORM 2: QUÊN MẬT KHẨU & XÁC THỰC MÃ OTP -->
+    <form id="form-forgot" style="display: none;">
+      <div class="form-group">
+        <label class="form-label">Email tài khoản cần khôi phục</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="email" id="reset-email" class="form-control" placeholder="Nhập email của bạn" required>
+          <button type="button" id="btn-send-otp" class="btn btn-outline" style="white-space: nowrap;">Lấy mã OTP</button>
+        </div>
+        <small style="color: var(--slate-500); font-size: 12px;">Mã xác minh 6 số sẽ gửi về Zalo Bot và Gmail của bạn.</small>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mã xác minh OTP (6 chữ số)</label>
+        <input type="text" id="reset-otp" class="form-control" placeholder="Nhập mã 6 số">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu mới (Tối thiểu 6 ký tự)</label>
+        <input type="password" id="reset-new-password" class="form-control" placeholder="Nhập mật khẩu mới">
+      </div>
+      <button type="submit" id="btn-submit-reset" class="btn btn-primary" style="width: 100%; padding: 11px;">
+        Xác nhận Đặt lại Mật khẩu
+      </button>
+      <div style="text-align: center; margin-top: 14px;">
+        <a href="#" id="link-back-login" style="color: var(--slate-700); font-size: 13px; text-decoration: none;">← Quay lại Đăng nhập</a>
+      </div>
+    </form>
+
+    <!-- KHUNG CẤU HÌNH NHANH GOOGLE APPS SCRIPT URL -->
+    <div id="box-api-config" style="display: none; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--slate-200);">
+      <label class="form-label">Google Apps Script Web App URL (/exec)</label>
+      <input type="url" id="input-gas-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+      <button type="button" id="btn-save-gas-url" class="btn btn-outline btn-sm" style="margin-top: 8px; width: 100%;">Lưu địa chỉ kết nối</button>
+    </div>
+  </div>
+
+  <script src="./assets/js/api.js"></script>
+  <script src="./assets/js/app.js"></script>
+  <script src="./assets/js/auth.js"></script>
+</body>
+</html>

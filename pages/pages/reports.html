@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo cáo Tiến độ & Đánh giá Kết quả</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main-wrapper">
+      <header class="topbar" id="app-topbar"></header>
+      <main class="content-container">
+
+        <!-- THẺ THỐNG KÊ NHANH BÁO CÁO & ĐÁNH GIÁ -->
+        <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));">
+          <div class="stat-card">
+            <div class="stat-label">Tổng số Báo cáo</div>
+            <div class="stat-value" id="rp-total">0</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #ea580c;">
+            <div class="stat-label">Chờ xét duyệt</div>
+            <div class="stat-value" id="rp-pending" style="color: #ea580c;">0</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #15803d;">
+            <div class="stat-label">Đã xác nhận</div>
+            <div class="stat-value" id="rp-approved">0</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #b91c1c;">
+            <div class="stat-label">Yêu cầu bổ sung / Làm lại</div>
+            <div class="stat-value" id="rp-action">0</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #2563eb;">
+            <div class="stat-label">Điểm Đánh giá TB</div>
+            <div class="stat-value" id="rp-avg-score">0</div>
+          </div>
+        </div>
+
+        <!-- THANH CHUYỂN ĐỔI TAB -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-primary" id="tab-btn-reports">📑 Danh sách Báo cáo Tiến độ & Xét duyệt</button>
+            <button class="btn btn-outline" id="tab-btn-scores">🏆 Bảng Tổng hợp Chấm điểm & Đánh giá (SCORES)</button>
+          </div>
+          <button class="btn btn-primary" id="btn-open-submit-report">📤 + Gửi Báo cáo Tiến độ Mới</button>
+        </div>
+
+        <!-- BỘ LỌC CHUNG -->
+        <div class="card">
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: end;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Từ khóa tìm kiếm</label>
+              <input type="text" id="flt-keyword" class="form-control" placeholder="Mã RPT, tên nhiệm vụ, người báo cáo...">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Trạng thái xét duyệt</label>
+              <select id="flt-review-status" class="form-control">
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="PENDING_REVIEW">Chờ xét duyệt</option>
+                <option value="APPROVED">Đã xác nhận</option>
+                <option value="SUPPLEMENT_REQUIRED">Yêu cầu bổ sung</option>
+                <option value="REDO_REQUIRED">Yêu cầu làm lại</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Bộ phận / Đơn vị</label>
+              <select id="flt-group" class="form-control">
+                <option value="ALL">Tất cả đơn vị</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Cán bộ thực hiện</label>
+              <select id="flt-user" class="form-control">
+                <option value="ALL">Tất cả cán bộ</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Kỳ đánh giá (Tháng)</label>
+              <input type="month" id="flt-month" class="form-control">
+            </div>
+            <div>
+              <button class="btn btn-primary" id="btn-filter" style="width:100%;">🔍 Lọc dữ liệu</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 1: BẢNG DANH SÁCH BÁO CÁO TIẾN ĐỘ -->
+        <div class="card" id="view-reports-table">
+          <div class="card-header">
+            <div class="card-title">Danh sách Báo cáo Tiến độ & Phê duyệt Kết quả</div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mã BC</th>
+                  <th>Nhiệm vụ</th>
+                  <th>Người báo cáo</th>
+                  <th>Nội dung & Kết quả thực hiện</th>
+                  <th>Tiến độ</th>
+                  <th>Minh chứng (Drive)</th>
+                  <th>Trạng thái duyệt</th>
+                  <th>Ý kiến người giao việc</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-reports">
+                <tr><td colspan="9" style="text-align:center;padding:24px;">Đang tải danh sách báo cáo...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 2: BẢNG TỔNG HỢP ĐIỂM ĐÁNH GIÁ (SCORES) -->
+        <div class="card" id="view-scores-table" style="display: none;">
+          <div class="card-header">
+            <div class="card-title">Bảng Tổng hợp Kết quả Chấm điểm & Xếp loại Cán bộ</div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mã Điểm</th>
+                  <th>Kỳ tháng</th>
+                  <th>Cán bộ được đánh giá</th>
+                  <th>Bộ phận</th>
+                  <th>Nhiệm vụ hoàn thành</th>
+                  <th>Điểm Đúng hạn (40%)</th>
+                  <th>Điểm Chất lượng (60%)</th>
+                  <th>Tổng điểm</th>
+                  <th>Xếp loại</th>
+                  <th>Nhận xét của Cán bộ quản lý</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-scores">
+                <tr><td colspan="10" style="text-align:center;padding:24px;">Đang tải bảng điểm đánh giá...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL 1: GỬI BÁO CÁO TIẾN ĐỘ & MINH CHỨNG MỚI -->
+  <div class="modal-backdrop" id="modal-submit-report">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title">📤 Gửi Báo cáo Tiến độ & Đính kèm Minh chứng</div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-submit-report').classList.remove('open')">✕</button>
+      </div>
+      <form id="form-submit-report">
+        <div class="form-group">
+          <label class="form-label">Chọn nhiệm vụ cần báo cáo *</label>
+          <select id="sr-task-id" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tỷ lệ hoàn thành đề xuất (%) *</label>
+          <input type="number" id="sr-progress" class="form-control" value="100" min="0" max="100" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nội dung chi tiết tiến độ thực hiện *</label>
+          <textarea id="sr-content" class="form-control" rows="3" placeholder="Mô tả các công việc đã triển khai..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tóm tắt kết quả đạt được *</label>
+          <input type="text" id="sr-summary" class="form-control" placeholder="VD: Đã hoàn thành 100% khối lượng, đảm bảo yêu cầu..." required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Đính kèm Hình ảnh / Tài liệu minh chứng (Google Drive)</label>
+          <input type="file" id="sr-files" class="form-control" multiple>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-submit-report').classList.remove('open')">Hủy</button>
+          <button type="submit" id="btn-do-submit-report" class="btn btn-primary">📤 Gửi Báo cáo & Báo Zalo Bot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: XÉT DUYỆT BÁO CÁO & CHẤM ĐIỂM ĐÁNH GIÁ (DÀNH CHO MANAGER / ADMIN) -->
+  <div class="modal-backdrop" id="modal-review-report">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title" id="rev-modal-title">✅ Xét duyệt Báo cáo & Đánh giá Kết quả</div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-review-report').classList.remove('open')">✕</button>
+      </div>
+      <form id="form-review-report">
+        <input type="hidden" id="rv-report-id">
+        <div style="background:var(--slate-100);padding:12px;border-radius:8px;margin-bottom:14px;font-size:13px;" id="rv-summary-box"></div>
+
+        <div class="form-group">
+          <label class="form-label">Quyết định xét duyệt của Cán bộ quản lý *</label>
+          <select id="rv-decision" class="form-control">
+            <option value="APPROVED">✅ Xác nhận hoàn thành (Phê duyệt báo cáo)</option>
+            <option value="SUPPLEMENT_REQUIRED">📝 Yêu cầu bổ sung báo cáo / minh chứng</option>
+            <option value="REDO_REQUIRED">🔄 Yêu cầu làm lại nhiệm vụ</option>
+          </select>
+        </div>
+
+        <!-- Khung chấm điểm (Hiện khi chọn APPROVED) -->
+        <div id="box-scoring" style="background:#eff6ff;border:1px solid #bfdbfe;padding:14px;border-radius:8px;margin-bottom:14px;">
+          <div style="font-weight:700;color:var(--navy-800);margin-bottom:10px;">🏆 Chấm điểm & Đánh giá mức độ hoàn thành</div>
+          <div class="form-grid">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label class="form-label">Điểm Đúng hạn (0 - 100)</label>
+              <input type="number" id="rv-score-time" class="form-control" value="100" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label class="form-label">Điểm Chất lượng (0 - 100)</label>
+              <input type="number" id="rv-score-quality" class="form-control" value="90" min="0" max="100">
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--navy-800);">
+            Dự kiến Tổng điểm: <strong id="rv-preview-total">94</strong>/100 — Xếp loại: <span id="rv-preview-rank"></span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ý kiến nhận xét / Chỉ đạo của người giao việc *</label>
+          <textarea id="rv-comment" class="form-control" rows="3" placeholder="Nhập nhận xét kết quả hoặc nội dung yêu cầu bổ sung/làm lại..." required></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-review-report').classList.remove('open')">Đóng</button>
+          <button type="submit" id="btn-do-review" class="btn btn-primary">Lưu Kết quả Xét duyệt (Báo Zalo Bot)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/tasks.js"></script>
+  <script src="../assets/js/reports.js"></script>
+  <script>
+    let allReportsData = [];
+    let allScoresData = [];
+
+    function switchTab(tab) {
+      const isScores = (tab === 'scores');
+      document.getElementById('view-reports-table').style.display = isScores ? 'none' : 'block';
+      document.getElementById('view-scores-table').style.display = isScores ? 'block' : 'none';
+      document.getElementById('tab-btn-reports').className = isScores ? 'btn btn-outline' : 'btn btn-primary';
+      document.getElementById('tab-btn-scores').className = isScores ? 'btn btn-primary' : 'btn btn-outline';
+    }
+
+    function updateScorePreview() {
+      const t = document.getElementById('rv-score-time').value;
+      const q = document.getElementById('rv-score-quality').value;
+      const calc = ReportUI.computeTotalAndRank(t, q);
+      document.getElementById('rv-preview-total').textContent = calc.total;
+      document.getElementById('rv-preview-rank').innerHTML = ReportUI.renderRankBadge(calc.rank);
+    }
+
+    async function loadFiltersAndTasksDropdown() {
+      const [usrRes, taskRes] = await Promise.all([
+        ApiClient.call('users.list'),
+        ApiClient.call('tasks.list', {})
+      ]);
+
+      if (usrRes.success) {
+        const groups = usrRes.data.groups || [];
+        const users = usrRes.data.users || [];
+        document.getElementById('flt-group').innerHTML = '<option value="ALL">Tất cả đơn vị</option>' +
+          groups.map(g => `<option value="${App.escapeHtml(g.Group_ID)}">${App.escapeHtml(g.Group_Code)} - ${App.escapeHtml(g.Group_Name)}</option>`).join('');
+        document.getElementById('flt-user').innerHTML = '<option value="ALL">Tất cả cán bộ</option>' +
+          users.map(u => `<option value="${App.escapeHtml(u.User_ID)}">${App.escapeHtml(u.Full_Name)}</option>`).join('');
+      }
+
+      if (taskRes.success) {
+        const tasks = (taskRes.data.tasks || []).filter(t => t.Status !== 'CANCELLED');
+        const sel = document.getElementById('sr-task-id');
+        if (tasks.length === 0) {
+          sel.innerHTML = '<option value="">-- Chưa có nhiệm vụ nào --</option>';
+        } else {
+          sel.innerHTML = tasks.map(t =>
+            `<option value="${App.escapeHtml(t.Task_ID)}">[${App.escapeHtml(t.Task_ID)}] ${App.escapeHtml(t.Title)} (Hiện tại: ${t.Progress}%)</option>`
+          ).join('');
+        }
+      }
+    }
+
+    async function fetchAndRenderReports() {
+      const payload = {
+        keyword: document.getElementById('flt-keyword').value.trim(),
+        reviewStatus: document.getElementById('flt-review-status').value,
+        groupId: document.getElementById('flt-group').value,
+        userId: document.getElementById('flt-user').value,
+        periodMonth: document.getElementById('flt-month').value
+      };
+
+      const res = await ApiClient.call('reports.list', payload);
+      if (!res.success) {
+        App.toast(res.message, 'error');
+        return;
+      }
+
+      allReportsData = res.data.reports || [];
+      allScoresData = res.data.scores || [];
+      const sum = res.data.summary || {};
+
+      document.getElementById('rp-total').textContent = sum.totalReports || 0;
+      document.getElementById('rp-pending').textContent = sum.pendingReview || 0;
+      document.getElementById('rp-approved').textContent = sum.approved || 0;
+      document.getElementById('rp-action').textContent = sum.needAction || 0;
+      document.getElementById('rp-avg-score').textContent = sum.averageScore ? `${sum.averageScore}/100` : '---';
+
+      const tbodyRep = document.getElementById('tbody-reports');
+      if (allReportsData.length === 0) {
+        tbodyRep.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#64748b;">Chưa có báo cáo tiến độ nào khớp điều kiện lọc.</td></tr>';
+      } else {
+        tbodyRep.innerHTML = allReportsData.map(r => `
+          <tr>
+            <td><strong>${App.escapeHtml(r.Report_ID)}</strong><br><small style="color:var(--slate-500);">${App.escapeHtml(r.Reported_At)}</small></td>
+            <td>
+              <a href="./task-detail.html?id=${encodeURIComponent(r.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(r.Task_Title)}</a>
+              <div><small style="color:var(--slate-500);">${App.escapeHtml(r.Task_ID)} | ${App.escapeHtml(r.Group_Name)}</small></div>
+            </td>
+            <td><strong>${App.escapeHtml(r.Reporter_Name)}</strong></td>
+            <td>
+              <div><strong>Kết quả:</strong> ${App.escapeHtml(r.Result_Summary)}</div>
+              <div style="font-size:12px;color:var(--slate-700);margin-top:2px;">${App.escapeHtml(r.Report_Content)}</div>
+            </td>
+            <td>${TaskUI.renderProgressBar(r.Progress_Percent)}</td>
+            <td>${ReportUI.renderEvidenceLinks(r.Evidence_Files)}</td>
+            <td>${ReportUI.renderReviewBadge(r.Review_Status)}</td>
+            <td>
+              <div style="font-size:13px;">${App.escapeHtml(r.Reviewer_Comment || '---')}</div>
+              ${r.Reviewed_At ? `<small style="color:var(--slate-500);">Duyệt bởi: ${App.escapeHtml(r.Reviewer_Name)}</small>` : ''}
+            </td>
+            <td style="white-space:nowrap;">
+              ${r.Can_Review ? `
+                <button class="btn btn-primary btn-sm" onclick="openReviewModal('${App.escapeHtml(r.Report_ID)}')">✅ Xét duyệt</button>
+              ` : '<span style="color:#94a3b8;font-size:12px;">---</span>'}
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      const tbodyScr = document.getElementById('tbody-scores');
+      if (allScoresData.length === 0) {
+        tbodyScr.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#64748b;">Chưa có dữ liệu chấm điểm đánh giá trong kỳ này.</td></tr>';
+      } else {
+        tbodyScr.innerHTML = allScoresData.map(s => `
+          <tr>
+            <td><code>${App.escapeHtml(s.Score_ID)}</code></td>
+            <td><strong>${App.escapeHtml(s.Period_Month)}</strong></td>
+            <td>
+              <strong>${App.escapeHtml(s.User_Name)}</strong>
+              <div><small style="color:var(--slate-500);">${App.escapeHtml(s.User_Position)}</small></div>
+            </td>
+            <td>${App.escapeHtml(s.Group_Name)}</td>
+            <td><a href="./task-detail.html?id=${encodeURIComponent(s.Task_ID)}" style="color:var(--blue-600);font-weight:600;text-decoration:none;">${App.escapeHtml(s.Task_Title)}</a></td>
+            <td><strong>${s.Timeliness_Score}</strong></td>
+            <td><strong>${s.Quality_Score}</strong></td>
+            <td><strong style="font-size:15px;color:var(--navy-800);">${s.Total_Score}</strong></td>
+            <td>${ReportUI.renderRankBadge(s.Rating_Rank)}</td>
+            <td>
+              <div>${App.escapeHtml(s.Evaluation_Note)}</div>
+              <small style="color:var(--slate-500);">Người chấm: ${App.escapeHtml(s.Evaluator_Name)}</small>
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    window.openReviewModal = function(reportId) {
+      const r = allReportsData.find(x => x.Report_ID === reportId);
+      if (!r) return;
+      document.getElementById('rv-report-id').value = r.Report_ID;
+      document.getElementById('rv-summary-box').innerHTML = `
+        <div><strong>Nhiệm vụ:</strong> ${App.escapeHtml(r.Task_Title)} (${App.escapeHtml(r.Task_ID)})</div>
+        <div><strong>Người báo cáo:</strong> ${App.escapeHtml(r.Reporter_Name)} — <strong>Đề xuất tiến độ:</strong> ${r.Progress_Percent}%</div>
+        <div><strong>Tóm tắt kết quả:</strong> ${App.escapeHtml(r.Result_Summary)}</div>
+      `;
+      document.getElementById('rv-decision').value = 'APPROVED';
+      document.getElementById('box-scoring').style.display = 'block';
+      document.getElementById('rv-score-time').value = r.Suggested_Timeliness_Score || 100;
+      document.getElementById('rv-score-quality').value = 90;
+      document.getElementById('rv-comment').value = r.Reviewer_Comment || 'Xác nhận hoàn thành đúng yêu cầu được giao.';
+      updateScorePreview();
+      document.getElementById('modal-review-report').classList.add('open');
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await App.initProtectedPage('reports', 'Báo cáo Tiến độ, Xét duyệt & Đánh giá Kết quả');
+      if (!user) return;
+
+      await loadFiltersAndTasksDropdown();
+      await fetchAndRenderReports();
+
+      document.getElementById('tab-btn-reports').addEventListener('click', () => switchTab('reports'));
+      document.getElementById('tab-btn-scores').addEventListener('click', () => switchTab('scores'));
+      document.getElementById('btn-filter').addEventListener('click', fetchAndRenderReports);
+
+      document.getElementById('btn-open-submit-report').addEventListener('click', () => {
+        document.getElementById('form-submit-report').reset();
+        document.getElementById('modal-submit-report').classList.add('open');
+      });
+
+      document.getElementById('rv-decision').addEventListener('change', (e) => {
+        const isApp = e.target.value === 'APPROVED';
+        document.getElementById('box-scoring').style.display = isApp ? 'block' : 'none';
+        if (!isApp) {
+          document.getElementById('rv-comment').value = '';
+          document.getElementById('rv-comment').placeholder = 'Nhập rõ nội dung yêu cầu cán bộ bổ sung hoặc làm lại...';
+        }
+      });
+
+      document.getElementById('rv-score-time').addEventListener('input', updateScorePreview);
+      document.getElementById('rv-score-quality').addEventListener('input', updateScorePreview);
+
+      // Xử lý Gửi báo cáo mới
+      document.getElementById('form-submit-report').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-do-submit-report');
+        btn.disabled = true;
+        btn.textContent = 'Đang tải minh chứng & gửi báo cáo...';
+        try {
+          const taskId = document.getElementById('sr-task-id').value;
+          const fileInput = document.getElementById('sr-files');
+          let uploadedFiles = [];
+          if (fileInput.files.length > 0) {
+            uploadedFiles = await TaskUI.uploadFilesToDrive(fileInput, taskId);
+          }
+
+          const res = await ApiClient.call('reports.submit', {
+            taskId: taskId,
+            progressPercent: document.getElementById('sr-progress').value,
+            reportContent: document.getElementById('sr-content').value.trim(),
+            resultSummary: document.getElementById('sr-summary').value.trim(),
+            evidenceFiles: uploadedFiles
+          });
+
+          App.toast(res.message, res.success ? 'success' : 'error');
+          if (res.success) {
+            document.getElementById('modal-submit-report').classList.remove('open');
+            fetchAndRenderReports();
+          }
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '📤 Gửi Báo cáo & Báo Zalo Bot';
+        }
+      });
+
+      // Xử lý Xét duyệt báo cáo & Chấm điểm
+      document.getElementById('form-review-report').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-do-review');
+        btn.disabled = true;
+        try {
+          const decision = document.getElementById('rv-decision').value;
+          const res = await ApiClient.call('reports.review', {
+            reportId: document.getElementById('rv-report-id').value,
+            decision: decision,
+            reviewerComment: document.getElementById('rv-comment').value.trim(),
+            timelinessScore: document.getElementById('rv-score-time').value,
+            qualityScore: document.getElementById('rv-score-quality').value,
+            markTaskCompleted: (decision === 'APPROVED')
+          });
+
+          App.toast(res.message, res.success ? 'success' : 'error');
+          if (res.success) {
+            document.getElementById('modal-review-report').classList.remove('open');
+            fetchAndRenderReports();
+          }
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

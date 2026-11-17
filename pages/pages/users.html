@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Cán bộ & Đơn vị</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main-wrapper">
+      <header class="topbar" id="app-topbar"></header>
+      <main class="content-container">
+
+        <!-- BẢNG 1: DANH SÁCH TÀI KHOẢN CÁN BỘ -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Danh sách Tài khoản Cán bộ & Phân quyền</div>
+            <div style="display: flex; gap: 8px;" id="admin-toolbar">
+              <button class="btn btn-primary btn-sm" id="btn-open-create-user">+ Tạo Tài khoản Mới</button>
+              <button class="btn btn-outline btn-sm" id="btn-open-create-group">+ Thêm Bộ phận / Đơn vị</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mã CB</th>
+                  <th>Họ và tên</th>
+                  <th>Email đăng nhập</th>
+                  <th>Bộ phận / Đơn vị</th>
+                  <th>Nhóm quyền</th>
+                  <th>Zalo Chat ID</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-users"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- BẢNG 2: DANH MỤC NHÓM / BỘ PHẬN / ĐƠN VỊ -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Danh mục Nhóm / Bộ phận / Đơn vị</div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mã Đơn vị</th>
+                  <th>Ký hiệu</th>
+                  <th>Tên Bộ phận / Đơn vị</th>
+                  <th>Zalo Group Chat ID</th>
+                  <th>Mô tả nhiệm vụ</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-groups"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL TẠO / SỬA TÀI KHOẢN CÁN BỘ -->
+  <div class="modal-backdrop" id="modal-user">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title" id="modal-user-title">Tạo Tài khoản Cán bộ</div>
+        <button class="btn btn-outline btn-sm" onclick="closeUserModal()">✕</button>
+      </div>
+      <form id="form-user">
+        <input type="hidden" id="u-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Họ và tên *</label>
+            <input type="text" id="u-fullname" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email đăng nhập *</label>
+            <input type="email" id="u-email" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group" id="group-pwd">
+            <label class="form-label">Mật khẩu khởi tạo *</label>
+            <input type="text" id="u-password" class="form-control" value="Donvi@123">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Chức vụ</label>
+            <input type="text" id="u-position" class="form-control">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Cấp phân quyền (Role) *</label>
+            <select id="u-role" class="form-control">
+              <option value="USER">USER - Cán bộ thực hiện nhiệm vụ</option>
+              <option value="MANAGER">MANAGER - Cán bộ quản lý / Giao việc</option>
+              <option value="SUPER_ADMIN">SUPER_ADMIN - Quản trị hệ thống</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bộ phận / Đơn vị trực thuộc *</label>
+            <select id="u-group" class="form-control"></select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Số điện thoại</label>
+            <input type="text" id="u-phone" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mã Zalo Chat ID (Nếu đã biết)</label>
+            <input type="text" id="u-zalo" class="form-control" placeholder="Tùy chọn">
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+          <button type="button" class="btn btn-outline" onclick="closeUserModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu Tài khoản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL THÊM NHÓM / ĐƠN VỊ -->
+  <div class="modal-backdrop" id="modal-group">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title">Thêm / Cập nhật Bộ phận - Đơn vị</div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-group').classList.remove('open')">✕</button>
+      </div>
+      <form id="form-group">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Ký hiệu viết tắt (VD: HCKT, TM)</label>
+            <input type="text" id="g-code" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tên đầy đủ Bộ phận / Đơn vị</label>
+            <input type="text" id="g-name" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mã Zalo Group Chat ID (Nếu thêm Bot vào nhóm Zalo)</label>
+          <input type="text" id="g-zalo" class="form-control" placeholder="Tùy chọn">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mô tả chức năng, nhiệm vụ</label>
+          <input type="text" id="g-desc" class="form-control">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="submit" class="btn btn-primary">Lưu Đơn vị</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script>
+    let allUsersList = [];
+    let allGroupsList = [];
+
+    function closeUserModal() {
+      document.getElementById('modal-user').classList.remove('open');
+    }
+
+    async function loadUsersAndGroups() {
+      const res = await ApiClient.call('users.list');
+      if (!res.success) {
+        App.toast(res.message, 'error');
+        return;
+      }
+      allUsersList = res.data.users || [];
+      allGroupsList = res.data.groups || [];
+      renderUsersTable();
+      renderGroupsTable();
+      populateGroupSelect();
+    }
+
+    function populateGroupSelect() {
+      const sel = document.getElementById('u-group');
+      sel.innerHTML = allGroupsList.map(g =>
+        `<option value="${App.escapeHtml(g.Group_ID)}">${App.escapeHtml(g.Group_Code)} - ${App.escapeHtml(g.Group_Name)}</option>`
+      ).join('');
+    }
+
+    function renderUsersTable() {
+      const isSuperAdmin = App.currentUser && App.currentUser.Role === 'SUPER_ADMIN';
+      const tbody = document.getElementById('tbody-users');
+
+      tbody.innerHTML = allUsersList.map(u => `
+        <tr>
+          <td><strong>${App.escapeHtml(u.User_ID)}</strong></td>
+          <td>
+            <div><strong>${App.escapeHtml(u.Full_Name)}</strong></div>
+            <small style="color: var(--slate-500);">${App.escapeHtml(u.Position || '')}</small>
+          </td>
+          <td>${App.escapeHtml(u.Email)}</td>
+          <td>${App.escapeHtml(u.Group_Name)}</td>
+          <td><span class="role-badge role-${App.escapeHtml(u.Role)}">${App.escapeHtml(u.Role)}</span></td>
+          <td>${u.Zalo_Chat_ID ? `<code>${App.escapeHtml(u.Zalo_Chat_ID)}</code>` : '<span style="color:#94a3b8;">Chưa liên kết</span>'}</td>
+          <td><span class="status-badge status-${App.escapeHtml(u.Status)}">${App.escapeHtml(u.Status)}</span></td>
+          <td>
+            ${isSuperAdmin ? `
+              <button class="btn btn-outline btn-sm" onclick="openEditUser('${App.escapeHtml(u.User_ID)}')">Sửa</button>
+              <button class="btn btn-outline btn-sm" onclick="toggleLock('${App.escapeHtml(u.User_ID)}')">${u.Status === 'ACTIVE' ? 'Khóa' : 'Mở'}</button>
+              <button class="btn btn-outline btn-sm" onclick="resetUserPwd('${App.escapeHtml(u.User_ID)}')">Cấp lại MK</button>
+            ` : '<span style="color:#94a3b8;">Chỉ xem</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderGroupsTable() {
+      const tbody = document.getElementById('tbody-groups');
+      tbody.innerHTML = allGroupsList.map(g => `
+        <tr>
+          <td><strong>${App.escapeHtml(g.Group_ID)}</strong></td>
+          <td><span class="role-badge role-SUPER_ADMIN">${App.escapeHtml(g.Group_Code)}</span></td>
+          <td><strong>${App.escapeHtml(g.Group_Name)}</strong></td>
+          <td>${g.Zalo_Group_Chat_ID ? `<code>${App.escapeHtml(g.Zalo_Group_Chat_ID)}</code>` : '---'}</td>
+          <td>${App.escapeHtml(g.Description || '')}</td>
+        </tr>
+      `).join('');
+    }
+
+    window.openEditUser = function(userId) {
+      const u = allUsersList.find(x => x.User_ID === userId);
+      if (!u) return;
+      document.getElementById('modal-user-title').textContent = 'Chỉnh sửa Tài khoản: ' + u.User_ID;
+      document.getElementById('u-id').value = u.User_ID;
+      document.getElementById('u-fullname').value = u.Full_Name;
+      document.getElementById('u-email').value = u.Email;
+      document.getElementById('u-position').value = u.Position || '';
+      document.getElementById('u-role').value = u.Role;
+      document.getElementById('u-group').value = u.Group_ID;
+      document.getElementById('u-phone').value = u.Phone || '';
+      document.getElementById('u-zalo').value = u.Zalo_Chat_ID || '';
+      document.getElementById('group-pwd').style.display = 'none';
+      document.getElementById('modal-user').classList.add('open');
+    };
+
+    window.toggleLock = async function(userId) {
+      const res = await ApiClient.call('users.toggleLock', { userId });
+      App.toast(res.message, res.success ? 'success' : 'error');
+      if (res.success) loadUsersAndGroups();
+    };
+
+    window.resetUserPwd = async function(userId) {
+      const newPassword = prompt('Nhập mật khẩu mới (tối thiểu 6 ký tự) để cấp lại cho cán bộ:', 'Donvi@123');
+      if (!newPassword) return;
+      const res = await ApiClient.call('users.adminResetPassword', { userId, newPassword });
+      App.toast(res.message, res.success ? 'success' : 'error');
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await App.initProtectedPage('users', 'Quản lý Cán bộ, Tài khoản & Đơn vị');
+      if (!user) return;
+
+      if (user.Role !== 'SUPER_ADMIN') {
+        document.getElementById('admin-toolbar').style.display = 'none';
+      }
+
+      await loadUsersAndGroups();
+
+      document.getElementById('btn-open-create-user').addEventListener('click', () => {
+        document.getElementById('form-user').reset();
+        document.getElementById('u-id').value = '';
+        document.getElementById('modal-user-title').textContent = 'Tạo Tài khoản Cán bộ Mới';
+        document.getElementById('group-pwd').style.display = 'block';
+        document.getElementById('modal-user').classList.add('open');
+      });
+
+      document.getElementById('btn-open-create-group').addEventListener('click', () => {
+        document.getElementById('form-group').reset();
+        document.getElementById('modal-group').classList.add('open');
+      });
+
+      document.getElementById('form-user').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userId = document.getElementById('u-id').value.trim();
+        const payload = {
+          userId: userId,
+          fullName: document.getElementById('u-fullname').value.trim(),
+          email: document.getElementById('u-email').value.trim(),
+          password: document.getElementById('u-password').value,
+          position: document.getElementById('u-position').value.trim(),
+          role: document.getElementById('u-role').value,
+          groupId: document.getElementById('u-group').value,
+          phone: document.getElementById('u-phone').value.trim(),
+          zaloChatId: document.getElementById('u-zalo').value.trim()
+        };
+
+        const action = userId ? 'users.update' : 'users.create';
+        const res = await ApiClient.call(action, payload);
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) {
+          closeUserModal();
+          loadUsersAndGroups();
+        }
+      });
+
+      document.getElementById('form-group').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const res = await ApiClient.call('groups.save', {
+          groupCode: document.getElementById('g-code').value.trim(),
+          groupName: document.getElementById('g-name').value.trim(),
+          zaloGroupChatId: document.getElementById('g-zalo').value.trim(),
+          description: document.getElementById('g-desc').value.trim()
+        });
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) {
+          document.getElementById('modal-group').classList.remove('open');
+          loadUsersAndGroups();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

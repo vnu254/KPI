@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Công việc & Nhiệm vụ Định kỳ</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main-wrapper">
+      <header class="topbar" id="app-topbar"></header>
+      <main class="content-container">
+
+        <!-- THANH CHUYỂN ĐỔI TAB: DANH SÁCH NHIỆM VỤ vs CHUỖI ĐỊNH KỲ & NGÀY NGHỈ LỄ -->
+        <div style="display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;">
+          <button class="btn btn-primary" id="tab-btn-tasks">📋 Danh sách Nhiệm vụ Thực hiện</button>
+          <button class="btn btn-outline" id="tab-btn-recurring">🔁 Quản lý Chuỗi Nhiệm vụ Định kỳ & Ngày nghỉ lễ</button>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- PHẦN 1: DANH SÁCH NHIỆM VỤ & BỘ LỌC ĐA CHIỀU                              -->
+        <!-- ========================================================================= -->
+        <div id="section-tasks-view">
+          <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));">
+            <div class="stat-card">
+              <div class="stat-label">Tổng số Công việc</div>
+              <div class="stat-value" id="st-total">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color: #64748b;">
+              <div class="stat-label">Chưa tiếp nhận</div>
+              <div class="stat-value" id="st-pending">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color: #2563eb;">
+              <div class="stat-label">Đang thực hiện</div>
+              <div class="stat-value" id="st-progress">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color: #ea580c;">
+              <div class="stat-label">Chờ xác nhận</div>
+              <div class="stat-value" id="st-confirm">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color: #15803d;">
+              <div class="stat-label">Đã hoàn thành</div>
+              <div class="stat-value" id="st-completed">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color: #b91c1c;">
+              <div class="stat-label">Quá hạn</div>
+              <div class="stat-value" id="st-overdue" style="color: var(--danger);">0</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Bộ lọc & Tìm kiếm Nhiệm vụ</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="./task-create.html" class="btn btn-primary">+ Tạo Công việc / Giao Nhiệm vụ</a>
+                <a href="./task-create.html?mode=recurring" class="btn btn-outline">🔁 + Tạo Chuỗi Định kỳ</a>
+                <button class="btn btn-outline btn-sm" id="btn-toggle-trash">🗑️ Xem thùng rác</button>
+              </div>
+            </div>
+
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+              <div class="form-group">
+                <label class="form-label">Từ khóa</label>
+                <input type="text" id="flt-keyword" class="form-control" placeholder="Mã NV, tên, mã REC...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phân loại nguồn</label>
+                <select id="flt-category" class="form-control">
+                  <option value="ALL">Tất cả phân loại</option>
+                  <option value="PERSONAL">Công việc cá nhân</option>
+                  <option value="ASSIGNED">Nhiệm vụ được giao</option>
+                  <option value="GROUP">Nhiệm vụ nhóm</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tính chất</label>
+                <select id="flt-nature" class="form-control">
+                  <option value="ALL">Tất cả tính chất</option>
+                  <option value="REGULAR">Thường xuyên</option>
+                  <option value="ADHOC">Đột xuất</option>
+                  <option value="PERIODIC">🔁 Định kỳ</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Trạng thái</label>
+                <select id="flt-status" class="form-control">
+                  <option value="ALL">Tất cả trạng thái</option>
+                  <option value="PENDING">Chưa tiếp nhận</option>
+                  <option value="ACCEPTED">Đã tiếp nhận</option>
+                  <option value="IN_PROGRESS">Đang thực hiện</option>
+                  <option value="WAITING_REPORT">Chờ báo cáo</option>
+                  <option value="REPORTED">Đã báo cáo</option>
+                  <option value="WAITING_CONFIRM">Chờ xác nhận</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="OVERDUE">Quá hạn</option>
+                  <option value="PAUSED">Tạm dừng</option>
+                  <option value="CANCELLED">Đã hủy</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Mức độ ưu tiên</label>
+                <select id="flt-priority" class="form-control">
+                  <option value="ALL">Tất cả mức độ</option>
+                  <option value="URGENT">Khẩn cấp</option>
+                  <option value="HIGH">Cao</option>
+                  <option value="MEDIUM">Trung bình</option>
+                  <option value="LOW">Thấp</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Bộ phận / Đơn vị</label>
+                <select id="flt-group" class="form-control">
+                  <option value="ALL">Tất cả đơn vị</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Người thực hiện</label>
+                <select id="flt-assignee" class="form-control">
+                  <option value="ALL">Tất cả cán bộ</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Hạn từ ngày</label>
+                <input type="date" id="flt-from" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Hạn đến ngày</label>
+                <input type="date" id="flt-to" class="form-control">
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button class="btn btn-outline btn-sm" id="btn-reset-filter">Đặt lại</button>
+              <button class="btn btn-primary btn-sm" id="btn-apply-filter">🔍 Lọc danh sách</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title" id="list-card-title">Danh sách Công việc & Nhiệm vụ hiện hành</div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã NV</th>
+                    <th>Tên công việc / Nhiệm vụ</th>
+                    <th>Phân loại</th>
+                    <th>Người giao</th>
+                    <th>Người thực hiện</th>
+                    <th>Thời hạn</th>
+                    <th>Ưu tiên</th>
+                    <th>Tiến độ</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-tasks">
+                  <tr><td colspan="10" style="text-align:center;padding:24px;">Đang tải dữ liệu...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- PHẦN 2: QUẢN LÝ CHUỖI NHIỆM VỤ ĐỊNH KỲ & DANH MỤC NGÀY NGHỈ LỄ           -->
+        <!-- ========================================================================= -->
+        <div id="section-recurring-view" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🔁 Danh sách Chuỗi Nhiệm vụ Định kỳ (RECURRING)</div>
+                <small style="color:var(--slate-500);">Tự động sinh nhiệm vụ theo lịch, chống trùng lặp và xử lý ngày cuối tháng / năm nhuận</small>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="./task-create.html?mode=recurring" class="btn btn-primary btn-sm">+ Tạo Chuỗi Định kỳ Mới</a>
+                <button class="btn btn-outline btn-sm" id="btn-run-generator">⚡ Quét & Sinh nhiệm vụ đến kỳ ngay</button>
+                <button class="btn btn-outline btn-sm" id="btn-install-trigger">⏰ Cài Trigger Tự động Hằng ngày</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã Chuỗi</th>
+                    <th>Tên mẫu nhiệm vụ định kỳ</th>
+                    <th>Người thực hiện</th>
+                    <th>Chu kỳ lặp</th>
+                    <th>Quy tắc Ngày lễ</th>
+                    <th>Đã sinh</th>
+                    <th>Kỳ tiếp theo</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-recurring">
+                  <tr><td colspan="9" style="text-align:center;padding:20px;">Đang tải chuỗi định kỳ...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- BẢNG QUẢN LÝ NGÀY NGHỈ LỄ & NGÀY ĐẶC BIỆT (HOLIDAYS) -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🎌 Danh mục Ngày nghỉ lễ & Ngày đặc biệt (HOLIDAYS)</div>
+                <small style="color:var(--slate-500);">Dùng để tự động dời hạn khi chuỗi định kỳ cài đặt quy tắc tránh ngày lễ</small>
+              </div>
+            </div>
+
+            <form id="form-holiday" style="margin-bottom: 16px; background: var(--slate-100); padding: 14px; border-radius: 8px;">
+              <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: end;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Ngày lễ / Ngày đặc biệt *</label>
+                  <input type="date" id="h-date" class="form-control" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Tên ngày lễ *</label>
+                  <input type="text" id="h-name" class="form-control" placeholder="VD: Quốc khánh 2/9" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
+                    <input type="checkbox" id="h-annual" checked> Lặp lại cố định hằng năm
+                  </label>
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary btn-sm" style="width:100%;">+ Thêm Ngày nghỉ lễ</button>
+                </div>
+              </div>
+            </form>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã</th>
+                    <th>Ngày</th>
+                    <th>Tên ngày lễ / Sự kiện</th>
+                    <th>Lặp hằng năm</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-holidays"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL CHỈNH SỬA CHUỖI NHIỆM VỤ ĐỊNH KỲ (HỖ TRỢ 3 PHẠM VI) -->
+  <div class="modal-backdrop" id="modal-edit-recurring">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title" id="modal-rec-title">Chỉnh sửa Chuỗi Nhiệm vụ Định kỳ</div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-edit-recurring').classList.remove('open')">✕</button>
+      </div>
+      <form id="form-edit-recurring">
+        <input type="hidden" id="er-id">
+        <div class="form-group">
+          <label class="form-label">Phạm vi áp dụng chỉnh sửa *</label>
+          <select id="er-scope" class="form-control">
+            <option value="THIS_AND_FOLLOWING">Cập nhật mẫu chuỗi & các lần thực hiện tiếp theo</option>
+            <option value="ALL_IN_SERIES">Cập nhật toàn bộ chuỗi (Bao gồm cả các nhiệm vụ chưa hoàn thành)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên mẫu nhiệm vụ định kỳ *</label>
+          <input type="text" id="er-title" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nội dung chi tiết</label>
+          <textarea id="er-desc" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Mức độ ưu tiên</label>
+            <select id="er-priority" class="form-control">
+              <option value="MEDIUM">Trung bình</option>
+              <option value="HIGH">Cao</option>
+              <option value="URGENT">Khẩn cấp</option>
+              <option value="LOW">Thấp</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Giờ đến hạn</label>
+            <input type="time" id="er-duetime" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Kỳ sinh nhiệm vụ tiếp theo (Next Run Date)</label>
+            <input type="date" id="er-next-date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ngày kết thúc chuỗi (Tùy chọn)</label>
+            <input type="date" id="er-end-date" class="form-control">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+          <button type="submit" class="btn btn-primary">Lưu Thay đổi Chuỗi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/tasks.js"></script>
+  <script>
+    let viewingTrash = false;
+    let currentTasks = [];
+    let currentSeriesList = [];
+
+    function switchMainTab(tabName) {
+      const isRec = (tabName === 'recurring');
+      document.getElementById('section-tasks-view').style.display = isRec ? 'none' : 'block';
+      document.getElementById('section-recurring-view').style.display = isRec ? 'block' : 'none';
+      document.getElementById('tab-btn-tasks').className = isRec ? 'btn btn-outline' : 'btn btn-primary';
+      document.getElementById('tab-btn-recurring').className = isRec ? 'btn btn-primary' : 'btn btn-outline';
+      if (isRec) {
+        fetchAndRenderRecurring();
+      } else {
+        fetchAndRenderTasks();
+      }
+    }
+
+    async function loadFilterOptions() {
+      const res = await ApiClient.call('users.list');
+      if (!res.success) return;
+
+      const groups = res.data.groups || [];
+      const users = res.data.users || [];
+
+      document.getElementById('flt-group').innerHTML = '<option value="ALL">Tất cả đơn vị</option>' +
+        groups.map(g => `<option value="${App.escapeHtml(g.Group_ID)}">${App.escapeHtml(g.Group_Code)} - ${App.escapeHtml(g.Group_Name)}</option>`).join('');
+
+      document.getElementById('flt-assignee').innerHTML = '<option value="ALL">Tất cả cán bộ</option>' +
+        users.map(u => `<option value="${App.escapeHtml(u.User_ID)}">${App.escapeHtml(u.Full_Name)} (${App.escapeHtml(u.Position || u.Role)})</option>`).join('');
+    }
+
+    async function fetchAndRenderTasks() {
+      const filters = {
+        keyword: document.getElementById('flt-keyword').value.trim(),
+        category: document.getElementById('flt-category').value,
+        nature: document.getElementById('flt-nature').value,
+        status: document.getElementById('flt-status').value,
+        priority: document.getElementById('flt-priority').value,
+        groupId: document.getElementById('flt-group').value,
+        assigneeId: document.getElementById('flt-assignee').value,
+        dateFrom: document.getElementById('flt-from').value,
+        dateTo: document.getElementById('flt-to').value,
+        includeDeleted: viewingTrash
+      };
+
+      const res = await ApiClient.call('tasks.list', filters);
+      if (!res.success) {
+        App.toast(res.message, 'error');
+        return;
+      }
+
+      currentTasks = res.data.tasks || [];
+      const sum = res.data.summary || {};
+
+      document.getElementById('st-total').textContent = sum.total || 0;
+      document.getElementById('st-pending').textContent = sum.pending || 0;
+      document.getElementById('st-progress').textContent = sum.inProgress || 0;
+      document.getElementById('st-confirm').textContent = sum.waitingConfirm || 0;
+      document.getElementById('st-completed').textContent = sum.completed || 0;
+      document.getElementById('st-overdue').textContent = sum.overdue || 0;
+
+      const tbody = document.getElementById('tbody-tasks');
+      if (currentTasks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#64748b;">Không có công việc nào khớp với điều kiện lọc.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = currentTasks.map(t => {
+        const recBadge = t.Recurring_ID ? `<span class="role-badge role-MANAGER" title="Mã chuỗi: ${App.escapeHtml(t.Recurring_ID)}">🔁 ${App.escapeHtml(t.Recurring_ID)}</span>` : '';
+        return `
+          <tr>
+            <td>
+              <a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(t.Task_ID)}</a>
+              <div>${recBadge}</div>
+            </td>
+            <td>
+              <div><a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" style="font-weight:700;color:var(--navy-800);text-decoration:none;">${App.escapeHtml(t.Title)}</a></div>
+              <small style="color:var(--slate-500);">${App.escapeHtml(t.Group_Name)} | ${TaskUI.NATURE_META[t.Task_Nature] || t.Task_Nature}</small>
+            </td>
+            <td>${TaskUI.renderCategoryBadge(t.Task_Category)}</td>
+            <td>${App.escapeHtml(t.Assigner_Name)}</td>
+            <td><strong>${App.escapeHtml(t.Primary_Assignee_Name)}</strong></td>
+            <td style="white-space:nowrap;">${TaskUI.formatVnDate(t.Due_Date, t.Due_Time)}</td>
+            <td>${TaskUI.renderPriorityBadge(t.Priority)}</td>
+            <td>${TaskUI.renderProgressBar(t.Progress)}</td>
+            <td>${TaskUI.renderStatusBadge(t.Status)}</td>
+            <td style="white-space:nowrap;">
+              <a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-outline btn-sm">Chi tiết</a>
+              ${!viewingTrash && t.Status === 'PENDING' && t.Primary_Assignee_ID === App.currentUser.User_ID ? `
+                <button class="btn btn-primary btn-sm" onclick="quickAccept('${App.escapeHtml(t.Task_ID)}')">Tiếp nhận</button>
+              ` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function fetchAndRenderRecurring() {
+      const res = await ApiClient.call('recurring.list');
+      if (!res.success) {
+        App.toast(res.message, 'error');
+        return;
+      }
+
+      currentSeriesList = res.data.series || [];
+      const holidays = res.data.holidays || [];
+
+      const tbodyRec = document.getElementById('tbody-recurring');
+      if (currentSeriesList.length === 0) {
+        tbodyRec.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#64748b;">Chưa có chuỗi nhiệm vụ định kỳ nào. Hãy bấm "+ Tạo Chuỗi Định kỳ Mới".</td></tr>';
+      } else {
+        const ruleLabels = { KEEP: 'Giữ nguyên', SHIFT_NEXT_WORKDAY: 'Dời sang ngày làm việc kế', SHIFT_PREV_WORKDAY: 'Lùi về ngày làm việc trước' };
+        tbodyRec.innerHTML = currentSeriesList.map(r => `
+          <tr>
+            <td><strong>${App.escapeHtml(r.Recurring_ID)}</strong></td>
+            <td>
+              <div><strong>${App.escapeHtml(r.Template_Title)}</strong></div>
+              <small style="color:var(--slate-500);">${App.escapeHtml(r.Group_Name)} | Giờ hạn: ${App.escapeHtml(r.Due_Time)}</small>
+            </td>
+            <td>${App.escapeHtml(r.Primary_Assignee_Name)}</td>
+            <td><strong>${App.escapeHtml(TaskUI.formatFrequencyText(r))}</strong></td>
+            <td><small>${App.escapeHtml(ruleLabels[r.Holiday_Rule] || r.Holiday_Rule)}</small></td>
+            <td><strong>${r.Generated_Count}</strong>${r.Max_Occurrences > 0 ? '/' + r.Max_Occurrences : ''} lần</td>
+            <td><strong style="color:var(--blue-600);">${TaskUI.formatVnDate(r.Next_Run_Date)}</strong></td>
+            <td><span class="status-badge status-${r.Status === 'ACTIVE' ? 'ACTIVE' : 'LOCKED'}">${App.escapeHtml(r.Status)}</span></td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-outline btn-sm" onclick="filterTasksBySeries('${App.escapeHtml(r.Recurring_ID)}')">Xem các lần lặp</button>
+              ${r.Can_Modify ? `
+                <button class="btn btn-outline btn-sm" onclick="openEditRecurringModal('${App.escapeHtml(r.Recurring_ID)}')">Sửa chuỗi</button>
+                ${r.Status === 'ACTIVE'
+                  ? `<button class="btn btn-outline btn-sm" onclick="changeSeriesSt('${App.escapeHtml(r.Recurring_ID)}', 'PAUSED')">Tạm dừng</button>`
+                  : `<button class="btn btn-primary btn-sm" onclick="changeSeriesSt('${App.escapeHtml(r.Recurring_ID)}', 'ACTIVE')">Kích hoạt</button>`
+                }
+                <button class="btn btn-danger btn-sm" onclick="changeSeriesSt('${App.escapeHtml(r.Recurring_ID)}', 'CANCELLED')">Kết thúc</button>
+              ` : ''}
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      const tbodyHol = document.getElementById('tbody-holidays');
+      if (holidays.length === 0) {
+        tbodyHol.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#64748b;">Chưa cấu hình ngày nghỉ lễ.</td></tr>';
+      } else {
+        tbodyHol.innerHTML = holidays.map(h => `
+          <tr>
+            <td><code>${App.escapeHtml(h.Holiday_ID)}</code></td>
+            <td><strong>${TaskUI.formatVnDate(h.Holiday_Date)}</strong></td>
+            <td>${App.escapeHtml(h.Holiday_Name)}</td>
+            <td>${h.Is_Annual_Recurring ? '✅ Hằng năm' : 'Một lần'}</td>
+            <td><button class="btn btn-outline btn-sm" onclick="deleteHolidayRow('${App.escapeHtml(h.Holiday_ID)}')">Xóa</button></td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    window.filterTasksBySeries = function(recId) {
+      document.getElementById('flt-keyword').value = recId;
+      switchMainTab('tasks');
+    };
+
+    window.openEditRecurringModal = function(recId) {
+      const r = currentSeriesList.find(x => x.Recurring_ID === recId);
+      if (!r) return;
+      document.getElementById('er-id').value = r.Recurring_ID;
+      document.getElementById('er-title').value = r.Template_Title;
+      document.getElementById('er-desc').value = r.Template_Desc || '';
+      document.getElementById('er-priority').value = r.Priority || 'MEDIUM';
+      document.getElementById('er-duetime').value = r.Due_Time || '17:00';
+      document.getElementById('er-next-date').value = r.Next_Run_Date || '';
+      document.getElementById('er-end-date').value = r.End_Date || '';
+      document.getElementById('modal-edit-recurring').classList.add('open');
+    };
+
+    window.changeSeriesSt = async function(recId, newStatus) {
+      const res = await ApiClient.call('recurring.changeStatus', { recurringId: recId, status: newStatus });
+      App.toast(res.message, res.success ? 'success' : 'error');
+      if (res.success) fetchAndRenderRecurring();
+    };
+
+    window.deleteHolidayRow = async function(holidayId) {
+      const res = await ApiClient.call('holidays.delete', { holidayId });
+      App.toast(res.message, res.success ? 'success' : 'error');
+      if (res.success) fetchAndRenderRecurring();
+    };
+
+    window.quickAccept = async function(taskId) {
+      const res = await ApiClient.call('tasks.accept', { taskId });
+      App.toast(res.message, res.success ? 'success' : 'error');
+      if (res.success) fetchAndRenderTasks();
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await App.initProtectedPage('tasks', 'Quản lý Công việc & Nhiệm vụ Định kỳ');
+      if (!user) return;
+
+      await loadFilterOptions();
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'recurring') {
+        switchMainTab('recurring');
+      } else {
+        await fetchAndRenderTasks();
+      }
+
+      document.getElementById('tab-btn-tasks').addEventListener('click', () => switchMainTab('tasks'));
+      document.getElementById('tab-btn-recurring').addEventListener('click', () => switchMainTab('recurring'));
+
+      document.getElementById('btn-apply-filter').addEventListener('click', fetchAndRenderTasks);
+      document.getElementById('btn-reset-filter').addEventListener('click', () => {
+        document.getElementById('flt-keyword').value = '';
+        document.getElementById('flt-category').value = 'ALL';
+        document.getElementById('flt-nature').value = 'ALL';
+        document.getElementById('flt-status').value = 'ALL';
+        document.getElementById('flt-priority').value = 'ALL';
+        document.getElementById('flt-group').value = 'ALL';
+        document.getElementById('flt-assignee').value = 'ALL';
+        document.getElementById('flt-from').value = '';
+        document.getElementById('flt-to').value = '';
+        fetchAndRenderTasks();
+      });
+
+      document.getElementById('btn-toggle-trash').addEventListener('click', () => {
+        viewingTrash = !viewingTrash;
+        document.getElementById('btn-toggle-trash').textContent = viewingTrash ? '📋 Danh sách chính' : '🗑️ Xem thùng rác';
+        fetchAndRenderTasks();
+      });
+
+      // Chạy quét & sinh nhiệm vụ định kỳ ngay lập tức
+      document.getElementById('btn-run-generator').addEventListener('click', async () => {
+        const res = await ApiClient.call('recurring.generateDue', {});
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) fetchAndRenderRecurring();
+      });
+
+      // Cài đặt Trigger tự động hằng ngày
+      document.getElementById('btn-install-trigger').addEventListener('click', async () => {
+        const res = await ApiClient.call('recurring.setupTrigger', {});
+        App.toast(res.message, res.success ? 'success' : 'error');
+      });
+
+      // Lưu chỉnh sửa chuỗi định kỳ
+      document.getElementById('form-edit-recurring').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const res = await ApiClient.call('recurring.editScope', {
+          recurringId: document.getElementById('er-id').value,
+          editScope: document.getElementById('er-scope').value,
+          title: document.getElementById('er-title').value.trim(),
+          description: document.getElementById('er-desc').value.trim(),
+          priority: document.getElementById('er-priority').value,
+          dueTime: document.getElementById('er-duetime').value,
+          nextRunDate: document.getElementById('er-next-date').value,
+          endDate: document.getElementById('er-end-date').value
+        });
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) {
+          document.getElementById('modal-edit-recurring').classList.remove('open');
+          fetchAndRenderRecurring();
+        }
+      });
+
+      // Thêm ngày nghỉ lễ
+      document.getElementById('form-holiday').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const res = await ApiClient.call('holidays.save', {
+          holidayDate: document.getElementById('h-date').value,
+          holidayName: document.getElementById('h-name').value.trim(),
+          isAnnualRecurring: document.getElementById('h-annual').checked,
+          isWorkingDay: false
+        });
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) {
+          document.getElementById('form-holiday').reset();
+          fetchAndRenderRecurring();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

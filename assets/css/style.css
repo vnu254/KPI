@@ -490,10 +490,34 @@ body {
 .toast.success { border-left: 5px solid #22c55e; }
 .toast.error { border-left: 5px solid #ef4444; }
 
+/* ==================== MÀN CHE TỐI (OVERLAY) CHO MOBILE MENU ==================== */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 41, 66, 0.6);
+  z-index: 95;
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.sidebar-overlay.open {
+  display: block;
+  opacity: 1;
+}
+
 /* ==================== RESPONSIVE TRÊN ĐIỆN THOẠI & TABLET ==================== */
+@media (max-width: 1024px) {
+  /* Tự động thu gọn các thẻ thống kê thành 2-3 cột thay vì hàng ngang */
+  .stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+  }
+}
+
 @media (max-width: 900px) {
   .sidebar {
     transform: translateX(-100%);
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
   }
   .sidebar.open {
     transform: translateX(0);
@@ -505,6 +529,82 @@ body {
     display: inline-block;
   }
   .content-container {
-    padding: 14px;
+    padding: 12px;
+  }
+  .topbar {
+    padding: 0 14px;
+  }
+  
+  /* Ẩn bớt chức vụ/Role trên thanh Topbar để tiết kiệm không gian điện thoại */
+  .topbar-right .user-pill span:last-child {
+    display: none;
+  }
+  
+  /* Modal hiển thị toàn màn hình trên điện thoại */
+  .modal-backdrop {
+    padding: 10px;
+  }
+  .modal-box {
+    margin: 0;
+    max-height: 98vh;
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  /* Sắp xếp lại Header của Card (Tiêu đề và nút bấm nằm dọc) */
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .card-header > div:last-child, 
+  .card-header > a, 
+  .card-header > button {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Ép tất cả các Form và Thẻ thống kê thành 1 cột dọc duy nhất trên màn hình nhỏ */
+  .stat-grid, .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Ép bảng dữ liệu (Table) cuộn ngang mượt mà, không bị vỡ chữ hay rớt dòng */
+  .data-table th, .data-table td {
+    white-space: nowrap;
+    padding: 10px;
+  }
+  .table-responsive {
+    border: 1px solid var(--slate-200);
+    border-radius: 8px;
+    -webkit-overflow-scrolling: touch; /* Hỗ trợ vuốt trượt mượt trên iOS/Android */
+  }
+
+  /* Thu nhỏ chữ và nút bấm */
+  body {
+    font-size: 13px;
+  }
+  .btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    width: 100%; /* Các nút bấm tự trải dài bằng màn hình */
+    justify-content: center;
+  }
+  .page-heading {
+    font-size: 15px;
+  }
+  
+  /* Căn chỉnh Toast Notification hiển thị vừa vặn màn hình */
+  .toast-container {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+  }
+  .toast {
+    min-width: 0;
+    width: 100%;
   }
 }

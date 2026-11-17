@@ -5,7 +5,7 @@
 
 const AppConfig = {
   // Dán URL Web App (/exec) của Google Apps Script vào đây (hoặc nhập trực tiếp trên màn hình Đăng nhập)
-  GAS_WEB_APP_URL: localStorage.getItem('CUSTOM_GAS_URL') || 'PASTE_YOUR_GOOGLE_APPS_SCRIPT_EXEC_URL_HERE',
+  GAS_WEB_APP_URL: localStorage.getItem('CUSTOM_GAS_URL') || 'https://script.google.com/macros/s/AKfycbyVSvb_sVa8SQEQeGvQOsLEyaMwfOAlYTQx5Eal27e4chSO84PlPj_8KlbWQVNXN9ZV/exec',
   REQUEST_TIMEOUT_MS: 30000,
   SESSION_STORAGE_KEY: 'INTERNAL_TASK_APP_SESSION'
 };

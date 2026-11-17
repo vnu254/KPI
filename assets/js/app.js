@@ -1,11 +1,12 @@
 /**
  * TỆP: assets/js/app.js
- * CHỨC NĂNG: Quản lý bố cục chung, phân quyền hiển thị menu, chống XSS và Toast Notification.
+ * CHỨC NĂNG: Quản lý khung giao diện Sidebar, Topbar, kiểm tra phiên và điều hướng an toàn (Giai đoạn 5).
  */
 
 const App = {
   currentUser: null,
   groups: [],
+  enabledPages: ['dashboard', 'users', 'profile', 'tasks', 'reports'],
 
   getRootPrefix() {
     return window.location.pathname.includes('/pages/') ? '../' : './';
@@ -36,9 +37,6 @@ const App = {
     setTimeout(() => item.remove(), 4000);
   },
 
-  /**
-   * Kiểm tra phiên đăng nhập và dựng Sidebar + Topbar tự động trên mọi trang nội bộ
-   */
   async initProtectedPage(pageKey, pageTitle) {
     const sess = ApiClient.getSession();
     const root = this.getRootPrefix();
@@ -87,21 +85,31 @@ const App = {
         </div>
         <div class="sidebar-nav">
           <div class="nav-section-label">Điều hành chung</div>
-          <a href="${root}dashboard.html" class="nav-item ${activeKey === 'dashboard' ? 'active' : ''}">📊 Bảng điều khiển</a>
-          <a href="${root}pages/tasks.html" class="nav-item ${activeKey === 'tasks' ? 'active' : ''}">📋 Danh sách nhiệm vụ</a>
-          <a href="${root}pages/calendar.html" class="nav-item ${activeKey === 'calendar' ? 'active' : ''}">📅 Lịch công việc</a>
-          <a href="${root}pages/reports.html" class="nav-item ${activeKey === 'reports' ? 'active' : ''}">📈 Báo cáo & Đánh giá</a>
+          <a href="${root}dashboard.html" data-page="dashboard" class="nav-item ${activeKey === 'dashboard' ? 'active' : ''}">📊 Bảng điều khiển</a>
+          <a href="${root}pages/tasks.html" data-page="tasks" class="nav-item ${activeKey === 'tasks' ? 'active' : ''}">📋 Quản lý Công việc</a>
+          <a href="${root}pages/calendar.html" data-page="calendar" class="nav-item ${activeKey === 'calendar' ? 'active' : ''}">📅 Lịch công việc</a>
+          <a href="${root}pages/reports.html" data-page="reports" class="nav-item ${activeKey === 'reports' ? 'active' : ''}">📈 Báo cáo & Đánh giá</a>
 
           <div class="nav-section-label">Tổ chức & Cá nhân</div>
-          ${isManagerOrAdmin ? `<a href="${root}pages/users.html" class="nav-item ${activeKey === 'users' ? 'active' : ''}">👥 Quản lý Cán bộ & Đơn vị</a>` : ''}
-          <a href="${root}pages/profile.html" class="nav-item ${activeKey === 'profile' ? 'active' : ''}">👤 Hồ sơ & Liên kết Zalo Bot</a>
-          ${isAdmin ? `<a href="${root}pages/settings.html" class="nav-item ${activeKey === 'settings' ? 'active' : ''}">⚙️ Cấu hình Hệ thống</a>` : ''}
+          ${isManagerOrAdmin ? `<a href="${root}pages/users.html" data-page="users" class="nav-item ${activeKey === 'users' ? 'active' : ''}">👥 Quản lý Cán bộ & Đơn vị</a>` : ''}
+          <a href="${root}pages/profile.html" data-page="profile" class="nav-item ${activeKey === 'profile' ? 'active' : ''}">👤 Hồ sơ & Liên kết Zalo Bot</a>
+          ${isAdmin ? `<a href="${root}pages/settings.html" data-page="settings" class="nav-item ${activeKey === 'settings' ? 'active' : ''}">⚙️ Cấu hình Hệ thống</a>` : ''}
         </div>
         <div class="sidebar-footer">
-          <div>Phiên bản: 2.0 (Direct Zalo Bot)</div>
+          <div>Phiên bản: 5.0 (Báo cáo & Đánh giá)</div>
           <div>Trạng thái Zalo: <strong>${u.Zalo_Linked ? 'Đã liên kết' : 'Chưa liên kết'}</strong></div>
         </div>
       `;
+
+      sidebarEl.querySelectorAll('.nav-item').forEach(link => {
+        link.addEventListener('click', (e) => {
+          const pageKey = link.getAttribute('data-page');
+          if (pageKey && !this.enabledPages.includes(pageKey)) {
+            e.preventDefault();
+            this.toast('Phân hệ này sẽ được kích hoạt ở giai đoạn tiếp theo.', 'error');
+          }
+        });
+      });
     }
 
     const topbarEl = document.getElementById('app-topbar');

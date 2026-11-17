@@ -14,33 +14,35 @@
       <main class="content-container">
         <div class="stat-grid">
           <div class="stat-card">
-            <div class="stat-label">Tổng số Cán bộ / Tài khoản</div>
-            <div class="stat-value" id="stat-total-users">--</div>
+            <div class="stat-label">Tổng số Nhiệm vụ</div>
+            <div class="stat-value" id="stat-total-tasks">--</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Đang hoạt động</div>
-            <div class="stat-value" id="stat-active-users">--</div>
+          <div class="stat-card" style="border-left-color: #2563eb;">
+            <div class="stat-label">Đang thực hiện</div>
+            <div class="stat-value" id="stat-inprogress-tasks">--</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Đã liên kết Zalo Bot</div>
-            <div class="stat-value" id="stat-zalo-users">--</div>
+          <div class="stat-card" style="border-left-color: #15803d;">
+            <div class="stat-label">Đã hoàn thành</div>
+            <div class="stat-value" id="stat-completed-tasks">--</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Số Bộ phận / Đơn vị</div>
-            <div class="stat-value" id="stat-total-groups">--</div>
+          <div class="stat-card" style="border-left-color: #b91c1c;">
+            <div class="stat-label">Nhiệm vụ Quá hạn</div>
+            <div class="stat-value" id="stat-overdue-tasks" style="color: var(--danger);">--</div>
           </div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Trạng thái Nền tảng & Truy cập nhanh</div>
+            <div class="card-title">Điều hành Nhanh & Quản lý Nhiệm vụ</div>
           </div>
           <p style="margin-bottom: 14px; color: var(--slate-700);">
             Xin chào <strong id="welcome-name"></strong>! Bạn đang đăng nhập với quyền <span id="welcome-role" class="role-badge"></span>.
           </p>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <a href="./pages/profile.html" class="btn btn-primary">👤 Cấu hình Hồ sơ & Liên kết Zalo Bot</a>
-            <a href="./pages/users.html" id="btn-goto-users" class="btn btn-outline">👥 Quản lý Cán bộ, Phân quyền & Đơn vị</a>
+            <a href="./pages/task-create.html" class="btn btn-primary">+ Tạo Công việc / Giao Nhiệm vụ Mới</a>
+            <a href="./pages/tasks.html" class="btn btn-outline">📋 Xem Danh sách Nhiệm vụ</a>
+            <a href="./pages/profile.html" class="btn btn-outline">👤 Hồ sơ & Liên kết Zalo Bot</a>
+            <a href="./pages/users.html" id="btn-goto-users" class="btn btn-outline">👥 Quản lý Cán bộ & Đơn vị</a>
           </div>
         </div>
       </main>
@@ -63,14 +65,13 @@
         document.getElementById('btn-goto-users').style.display = 'none';
       }
 
-      const res = await ApiClient.call('users.list');
-      if (res.success) {
-        const users = res.data.users || [];
-        const groups = res.data.groups || [];
-        document.getElementById('stat-total-users').textContent = users.length;
-        document.getElementById('stat-active-users').textContent = users.filter(u => u.Status === 'ACTIVE').length;
-        document.getElementById('stat-zalo-users').textContent = users.filter(u => u.Zalo_Linked).length;
-        document.getElementById('stat-total-groups').textContent = groups.length;
+      const taskRes = await ApiClient.call('tasks.list', {});
+      if (taskRes.success && taskRes.data.summary) {
+        const s = taskRes.data.summary;
+        document.getElementById('stat-total-tasks').textContent = s.total || 0;
+        document.getElementById('stat-inprogress-tasks').textContent = (s.pending || 0) + (s.inProgress || 0) + (s.waitingConfirm || 0);
+        document.getElementById('stat-completed-tasks').textContent = s.completed || 0;
+        document.getElementById('stat-overdue-tasks').textContent = s.overdue || 0;
       }
     });
   </script>

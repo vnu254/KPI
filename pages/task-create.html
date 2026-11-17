@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tạo Công việc & Thiết lập Nhiệm vụ Định kỳ</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main-wrapper">
+      <header class="topbar" id="app-topbar"></header>
+      <main class="content-container">
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title" id="form-heading">Khởi tạo Công việc / Giao Nhiệm vụ & Thiết lập Định kỳ</div>
+            <a href="./tasks.html" class="btn btn-outline btn-sm">← Quay lại Danh sách</a>
+          </div>
+
+          <form id="form-task">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Phân loại công việc *</label>
+                <select id="t-category" class="form-control">
+                  <option value="PERSONAL">Công việc cá nhân (Tự tạo & tự quản lý)</option>
+                  <option value="ASSIGNED" id="opt-assigned">Nhiệm vụ được giao (Giao cho 1 cán bộ)</option>
+                  <option value="GROUP" id="opt-group">Nhiệm vụ nhóm (Nhiều người phối hợp)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tính chất nhiệm vụ *</label>
+                <select id="t-nature" class="form-control">
+                  <option value="REGULAR">Nhiệm vụ thường xuyên (Tạo 1 lần)</option>
+                  <option value="ADHOC">Nhiệm vụ đột xuất (Tạo 1 lần)</option>
+                  <option value="PERIODIC">🔁 Nhiệm vụ định kỳ (Tự động lặp theo lịch)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Mức độ ưu tiên *</label>
+                <select id="t-priority" class="form-control">
+                  <option value="MEDIUM">Trung bình</option>
+                  <option value="HIGH">Cao</option>
+                  <option value="URGENT">Khẩn cấp</option>
+                  <option value="LOW">Thấp</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tên công việc / Mẫu nhiệm vụ định kỳ *</label>
+              <input type="text" id="t-title" class="form-control" placeholder="VD: Báo cáo quân số hằng ngày / Kiểm tra công tác hậu cần hằng tuần..." required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Nội dung chi tiết & Yêu cầu kết quả</label>
+              <textarea id="t-desc" class="form-control" rows="4" placeholder="Mô tả nội dung công việc, chỉ tiêu, yêu cầu báo cáo..."></textarea>
+            </div>
+
+            <!-- KHU VỰC PHÂN CÔNG NGƯỜI THỰC HIỆN -->
+            <div id="box-assignment" style="display: none; background: var(--slate-100); padding: 16px; border-radius: 8px; margin-bottom: 14px;">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Bộ phận / Đơn vị thực hiện *</label>
+                  <select id="t-group" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Cán bộ chủ trì thực hiện chính *</label>
+                  <select id="t-primary-assignee" class="form-control"></select>
+                </div>
+              </div>
+              <div class="form-group" id="box-cooperators">
+                <label class="form-label">Cán bộ phối hợp thực hiện (Giữ phím Ctrl hoặc chạm để chọn nhiều người)</label>
+                <select id="t-cooperators" class="form-control" multiple style="height: 105px;"></select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                  <input type="checkbox" id="t-require-approval" checked>
+                  Yêu cầu người giao việc xét duyệt & xác nhận mới được tính là Hoàn thành
+                </label>
+              </div>
+            </div>
+
+            <!-- KHU VỰC CẤU HÌNH CHUỖI NHIỆM VỤ ĐỊNH KỲ (HIỂN THỊ KHI CHỌN PERIODIC) -->
+            <div id="box-recurring-config" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; padding: 18px; border-radius: 10px; margin-bottom: 16px;">
+              <div style="font-weight: 700; color: var(--navy-800); margin-bottom: 12px; font-size: 15px;">
+                🔁 Cấu hình Chuỗi Nhiệm vụ Định kỳ (Tự động xử lý ngày cuối tháng, năm nhuận & ngày lễ)
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Tần suất lặp *</label>
+                  <select id="rec-freq" class="form-control">
+                    <option value="DAILY">Hằng ngày (Daily)</option>
+                    <option value="WEEKLY">Hằng tuần (Weekly)</option>
+                    <option value="MONTHLY">Hằng tháng (Monthly)</option>
+                    <option value="YEARLY">Hằng năm (Yearly)</option>
+                    <option value="CUSTOM_DAYS">Khoảng cách ngày tùy chỉnh (VD: 90 ngày/quý)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Khoảng cách lặp (Mỗi bao nhiêu kỳ) *</label>
+                  <input type="number" id="rec-interval" class="form-control" value="1" min="1" max="365">
+                  <small style="color:var(--slate-500);">VD: Nhập 1 = mỗi tuần; nhập 90 với Tùy chỉnh = mỗi 90 ngày</small>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Số ngày cho phép thực hiện mỗi lần *</label>
+                  <input type="number" id="rec-duration" class="form-control" value="0" min="0" max="90">
+                  <small style="color:var(--slate-500);">0 = Hoàn thành ngay trong ngày sinh nhiệm vụ</small>
+                </div>
+              </div>
+
+              <!-- Chọn Thứ trong tuần (Chỉ hiện khi chọn WEEKLY) -->
+              <div class="form-group" id="box-rec-weekly" style="display: none;">
+                <label class="form-label">Chọn các Thứ lặp lại trong tuần *</label>
+                <div style="display: flex; gap: 14px; flex-wrap: wrap; padding: 8px 0;">
+                  <label><input type="checkbox" class="chk-dow" value="1" checked> Thứ 2</label>
+                  <label><input type="checkbox" class="chk-dow" value="2"> Thứ 3</label>
+                  <label><input type="checkbox" class="chk-dow" value="3"> Thứ 4</label>
+                  <label><input type="checkbox" class="chk-dow" value="4"> Thứ 5</label>
+                  <label><input type="checkbox" class="chk-dow" value="5"> Thứ 6</label>
+                  <label><input type="checkbox" class="chk-dow" value="6"> Thứ 7</label>
+                  <label><input type="checkbox" class="chk-dow" value="7"> Chủ nhật</label>
+                </div>
+              </div>
+
+              <!-- Chọn Ngày trong tháng & Tháng trong năm (Hiện khi chọn MONTHLY hoặc YEARLY) -->
+              <div class="form-grid" id="box-rec-monthly" style="display: none;">
+                <div class="form-group">
+                  <label class="form-label">Ngày thực hiện trong tháng *</label>
+                  <select id="rec-dom" class="form-control">
+                    <option value="-1">📌 Luôn vào Ngày cuối cùng của tháng (28, 29, 30 hoặc 31)</option>
+                  </select>
+                </div>
+                <div class="form-group" id="box-rec-yearly-month" style="display: none;">
+                  <label class="form-label">Tháng thực hiện trong năm *</label>
+                  <select id="rec-moy" class="form-control">
+                    <option value="1">Tháng 1</option><option value="2">Tháng 2</option><option value="3">Tháng 3</option>
+                    <option value="4">Tháng 4</option><option value="5">Tháng 5</option><option value="6">Tháng 6</option>
+                    <option value="7">Tháng 7</option><option value="8">Tháng 8</option><option value="9">Tháng 9</option>
+                    <option value="10">Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Xử lý khi trùng Ngày nghỉ lễ (HOLIDAYS)</label>
+                  <select id="rec-holiday-rule" class="form-control">
+                    <option value="KEEP">Giữ nguyên lịch (Vẫn sinh nhiệm vụ vào ngày lễ)</option>
+                    <option value="SHIFT_NEXT_WORKDAY">Dời sang ngày làm việc kế tiếp</option>
+                    <option value="SHIFT_PREV_WORKDAY">Lùi về ngày làm việc trước đó</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Ngày kết thúc chuỗi (Để trống nếu lặp vô hạn)</label>
+                  <input type="date" id="rec-end-date" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Giới hạn tổng số lần lặp (0 = Không giới hạn)</label>
+                  <input type="number" id="rec-max-occ" class="form-control" value="0" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- THỜI HẠN & NHẮC VIỆC -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" id="lbl-start-date">Ngày bắt đầu *</label>
+                <input type="date" id="t-start-date" class="form-control" required>
+              </div>
+              <div class="form-group" id="group-due-date">
+                <label class="form-label">Ngày đến hạn *</label>
+                <input type="date" id="t-due-date" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Giờ đến hạn *</label>
+                <input type="time" id="t-due-time" class="form-control" value="17:00" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Mốc nhắc trước hạn qua Zalo Bot (phút)</label>
+                <input type="text" id="t-remind-mins" class="form-control" value="1440, 120, 30">
+              </div>
+            </div>
+
+            <!-- ĐÍNH KÈM TÀI LIỆU LÊN GOOGLE DRIVE -->
+            <div class="form-group" id="box-upload-files">
+              <label class="form-label">Đính kèm Tài liệu / Văn bản giao việc (Lưu trữ trên Google Drive)</label>
+              <input type="file" id="t-files" class="form-control" multiple>
+              <div id="existing-attachments" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Ghi chú bổ sung</label>
+              <input type="text" id="t-notes" class="form-control" placeholder="Ghi chú thêm (nếu có)...">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+              <a href="./tasks.html" class="btn btn-outline">Hủy bỏ</a>
+              <button type="submit" id="btn-save-task" class="btn btn-primary">💾 Lưu Công việc & Kích hoạt</button>
+            </div>
+          </form>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/tasks.js"></script>
+  <script>
+    let editingTaskId = '';
+    let savedAttachments = [];
+
+    function populateDaysOfMonthSelect() {
+      const sel = document.getElementById('rec-dom');
+      let html = '<option value="-1">📌 Luôn vào Ngày cuối cùng của tháng (28, 29, 30 hoặc 31)</option>';
+      for (let d = 1; d <= 31; d++) {
+        html += `<option value="${d}">Ngày ${d} hằng tháng (Tự co về cuối tháng nếu tháng thiếu)</option>`;
+      }
+      sel.innerHTML = html;
+    }
+
+    function toggleAssignmentSection() {
+      const cat = document.getElementById('t-category').value;
+      document.getElementById('box-assignment').style.display = (cat === 'PERSONAL') ? 'none' : 'block';
+    }
+
+    function toggleRecurringSection() {
+      const nature = document.getElementById('t-nature').value;
+      const isPeriodic = (nature === 'PERIODIC') && !editingTaskId;
+      document.getElementById('box-recurring-config').style.display = isPeriodic ? 'block' : 'none';
+      document.getElementById('group-due-date').style.display = isPeriodic ? 'none' : 'block';
+      document.getElementById('lbl-start-date').textContent = isPeriodic ? 'Ngày bắt đầu áp dụng chuỗi *' : 'Ngày bắt đầu *';
+    }
+
+    function toggleFrequencySubFields() {
+      const freq = document.getElementById('rec-freq').value;
+      document.getElementById('box-rec-weekly').style.display = (freq === 'WEEKLY') ? 'block' : 'none';
+      document.getElementById('box-rec-monthly').style.display = (freq === 'MONTHLY' || freq === 'YEARLY') ? 'grid' : 'none';
+      document.getElementById('box-rec-yearly-month').style.display = (freq === 'YEARLY') ? 'block' : 'none';
+    }
+
+    function renderSavedAttachments() {
+      const box = document.getElementById('existing-attachments');
+      box.innerHTML = savedAttachments.map((f, idx) => `
+        <span class="user-pill" style="font-size:12px;">
+          📎 <a href="${App.escapeHtml(f.fileUrl)}" target="_blank">${App.escapeHtml(f.fileName)}</a>
+          <button type="button" onclick="removeAttachment(${idx})" style="border:none;background:none;cursor:pointer;color:var(--danger);font-weight:700;">✕</button>
+        </span>
+      `).join('');
+    }
+
+    window.removeAttachment = function(idx) {
+      savedAttachments.splice(idx, 1);
+      renderSavedAttachments();
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await App.initProtectedPage('tasks', 'Tạo Công việc & Thiết lập Định kỳ');
+      if (!user) return;
+
+      populateDaysOfMonthSelect();
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('t-start-date').value = today;
+      document.getElementById('t-due-date').value = today;
+
+      if (user.Role === 'USER') {
+        document.getElementById('opt-assigned').disabled = true;
+        document.getElementById('opt-group').disabled = true;
+        document.getElementById('t-category').value = 'PERSONAL';
+      } else {
+        document.getElementById('t-category').value = 'ASSIGNED';
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('mode') === 'recurring') {
+        document.getElementById('t-nature').value = 'PERIODIC';
+      }
+
+      toggleAssignmentSection();
+      toggleRecurringSection();
+      toggleFrequencySubFields();
+
+      document.getElementById('t-category').addEventListener('change', toggleAssignmentSection);
+      document.getElementById('t-nature').addEventListener('change', toggleRecurringSection);
+      document.getElementById('rec-freq').addEventListener('change', toggleFrequencySubFields);
+
+      const usrRes = await ApiClient.call('users.list');
+      if (usrRes.success) {
+        const groups = usrRes.data.groups || [];
+        const users = usrRes.data.users || [];
+
+        document.getElementById('t-group').innerHTML = groups.map(g =>
+          `<option value="${App.escapeHtml(g.Group_ID)}">${App.escapeHtml(g.Group_Code)} - ${App.escapeHtml(g.Group_Name)}</option>`
+        ).join('');
+
+        const userOpts = users.map(u =>
+          `<option value="${App.escapeHtml(u.User_ID)}">${App.escapeHtml(u.Full_Name)} (${App.escapeHtml(u.Position || u.Role)})</option>`
+        ).join('');
+        document.getElementById('t-primary-assignee').innerHTML = userOpts;
+        document.getElementById('t-cooperators').innerHTML = userOpts;
+      }
+
+      editingTaskId = params.get('id') || '';
+      if (editingTaskId) {
+        document.getElementById('form-heading').textContent = 'Chỉnh sửa Công việc: ' + editingTaskId;
+        const detailRes = await ApiClient.call('tasks.detail', { taskId: editingTaskId });
+        if (detailRes.success) {
+          const t = detailRes.data.task;
+          const members = detailRes.data.members || [];
+          document.getElementById('t-category').value = t.Task_Category;
+          toggleAssignmentSection();
+          document.getElementById('t-nature').value = t.Task_Nature;
+          toggleRecurringSection();
+          document.getElementById('t-priority').value = t.Priority;
+          document.getElementById('t-title').value = t.Title;
+          document.getElementById('t-desc').value = t.Description;
+          document.getElementById('t-group').value = t.Group_ID;
+          document.getElementById('t-primary-assignee').value = t.Primary_Assignee_ID;
+          document.getElementById('t-require-approval').checked = Boolean(t.Require_Approval);
+          document.getElementById('t-start-date').value = t.Start_Date;
+          document.getElementById('t-due-date').value = t.Due_Date;
+          document.getElementById('t-due-time').value = t.Due_Time;
+          document.getElementById('t-remind-mins').value = (t.Remind_Before_Mins || [1440, 120, 30]).join(', ');
+          document.getElementById('t-notes').value = t.Notes || '';
+
+          const coopIds = members.filter(m => m.Member_Role === 'COOPERATOR').map(m => m.User_ID);
+          Array.from(document.getElementById('t-cooperators').options).forEach(opt => {
+            opt.selected = coopIds.includes(opt.value);
+          });
+
+          savedAttachments = t.Attachments || [];
+          renderSavedAttachments();
+        }
+      }
+
+      document.getElementById('form-task').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-task');
+        btn.disabled = true;
+        btn.textContent = 'Đang xử lý...';
+
+        try {
+          const selectedCoops = Array.from(document.getElementById('t-cooperators').selectedOptions).map(o => o.value);
+          const remindMins = document.getElementById('t-remind-mins').value
+            .split(',')
+            .map(x => parseInt(x.trim(), 10))
+            .filter(x => !isNaN(x) && x > 0);
+
+          const nature = document.getElementById('t-nature').value;
+
+          // NHÁNH 1: TẠO CHUỖI NHIỆM VỤ ĐỊNH KỲ MỚI
+          if (nature === 'PERIODIC' && !editingTaskId) {
+            const checkedDows = Array.from(document.querySelectorAll('.chk-dow:checked')).map(c => Number(c.value));
+            const recPayload = {
+              taskCategory: document.getElementById('t-category').value,
+              priority: document.getElementById('t-priority').value,
+              title: document.getElementById('t-title').value.trim(),
+              description: document.getElementById('t-desc').value.trim(),
+              groupId: document.getElementById('t-group').value,
+              primaryAssigneeId: document.getElementById('t-primary-assignee').value,
+              cooperatorIds: selectedCoops,
+              requireApproval: document.getElementById('t-require-approval').checked,
+              frequencyType: document.getElementById('rec-freq').value,
+              intervalValue: Number(document.getElementById('rec-interval').value) || 1,
+              daysOfWeek: checkedDows.length ? checkedDows : [1],
+              dayOfMonth: Number(document.getElementById('rec-dom').value),
+              monthOfYear: Number(document.getElementById('rec-moy').value) || 1,
+              holidayRule: document.getElementById('rec-holiday-rule').value,
+              durationDays: Number(document.getElementById('rec-duration').value) || 0,
+              startDate: document.getElementById('t-start-date').value,
+              endDate: document.getElementById('rec-end-date').value,
+              maxOccurrences: Number(document.getElementById('rec-max-occ').value) || 0,
+              dueTime: document.getElementById('t-due-time').value,
+              remindBeforeMins: remindMins.length ? remindMins : [1440, 120, 30]
+            };
+
+            const res = await ApiClient.call('recurring.create', recPayload);
+            if (res.success) {
+              App.toast(res.message);
+              window.location.href = './tasks.html?tab=recurring';
+            } else {
+              App.toast(res.message, 'error');
+            }
+            return;
+          }
+
+          // NHÁNH 2: TẠO HOẶC SỬA CÔNG VIỆC THÔNG THƯỜNG
+          const fileInput = document.getElementById('t-files');
+          if (fileInput.files.length > 0) {
+            const newlyUploaded = await TaskUI.uploadFilesToDrive(fileInput, editingTaskId);
+            savedAttachments = savedAttachments.concat(newlyUploaded);
+          }
+
+          const payload = {
+            taskId: editingTaskId,
+            taskCategory: document.getElementById('t-category').value,
+            taskNature: nature,
+            priority: document.getElementById('t-priority').value,
+            title: document.getElementById('t-title').value.trim(),
+            description: document.getElementById('t-desc').value.trim(),
+            groupId: document.getElementById('t-group').value,
+            primaryAssigneeId: document.getElementById('t-primary-assignee').value,
+            cooperatorIds: selectedCoops,
+            requireApproval: document.getElementById('t-require-approval').checked,
+            startDate: document.getElementById('t-start-date').value,
+            dueDate: document.getElementById('t-due-date').value,
+            dueTime: document.getElementById('t-due-time').value,
+            remindBeforeMins: remindMins.length ? remindMins : [1440, 120, 30],
+            attachments: savedAttachments,
+            notes: document.getElementById('t-notes').value.trim()
+          };
+
+          const action = editingTaskId ? 'tasks.update' : 'tasks.create';
+          const res = await ApiClient.call(action, payload);
+          if (res.success) {
+            App.toast(res.message);
+            const targetId = editingTaskId || (res.data.task && res.data.task.Task_ID);
+            window.location.href = `./task-detail.html?id=${encodeURIComponent(targetId)}`;
+          } else {
+            App.toast(res.message, 'error');
+          }
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '💾 Lưu Công việc & Kích hoạt';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

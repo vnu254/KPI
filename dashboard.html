@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bảng điều khiển - Quản lý Công việc</title>
+  <title>Bảng điều khiển & Thống kê - Hệ thống Quản lý Công việc</title>
   <link rel="stylesheet" href="./assets/css/style.css">
+  <!-- Thư viện Chart.js v4 qua CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -12,67 +14,369 @@
     <div class="main-wrapper">
       <header class="topbar" id="app-topbar"></header>
       <main class="content-container">
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-label">Tổng số Nhiệm vụ</div>
-            <div class="stat-value" id="stat-total-tasks">--</div>
-          </div>
-          <div class="stat-card" style="border-left-color: #2563eb;">
-            <div class="stat-label">Đang thực hiện</div>
-            <div class="stat-value" id="stat-inprogress-tasks">--</div>
-          </div>
-          <div class="stat-card" style="border-left-color: #15803d;">
-            <div class="stat-label">Đã hoàn thành</div>
-            <div class="stat-value" id="stat-completed-tasks">--</div>
-          </div>
-          <div class="stat-card" style="border-left-color: #b91c1c;">
-            <div class="stat-label">Nhiệm vụ Quá hạn</div>
-            <div class="stat-value" id="stat-overdue-tasks" style="color: var(--danger);">--</div>
+
+        <!-- THANH CÔNG CỤ CHUYỂN ĐỔI GÓC NHÌN DASHBOARD & XUẤT BÁO CÁO EXCEL / PDF -->
+        <div class="card" style="padding: 14px 20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <span style="font-weight:700;color:var(--navy-800);font-size:13px;">Chế độ Dashboard:</span>
+              <button class="btn btn-primary btn-sm" id="btn-view-admin" onclick="DashboardController.switchRoleView('SUPER_ADMIN')">🏛️ Toàn Hệ thống (SUPER ADMIN)</button>
+              <button class="btn btn-outline btn-sm" id="btn-view-manager" onclick="DashboardController.switchRoleView('MANAGER')">📋 Quản lý Bộ phận (MANAGER)</button>
+              <button class="btn btn-outline btn-sm" id="btn-view-user" onclick="DashboardController.switchRoleView('USER')">👤 Công việc của Tôi (USER)</button>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <select id="db-flt-group" class="form-control" style="width:200px;padding:6px 10px;font-size:13px;">
+                <option value="ALL">Toàn bộ đơn vị / bộ phận</option>
+              </select>
+              <button class="btn btn-outline btn-sm" onclick="DashboardController.refreshDashboard()">🔄 Làm mới số liệu</button>
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('modal-export-report').classList.add('open')">
+                📥 Xuất Báo cáo (Excel / PDF)
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Điều hành Nhanh & Quản lý Nhiệm vụ</div>
+        <!-- ========================================================================= -->
+        <!-- 1. DASHBOARD DÀNH CHO SUPER ADMIN (TOÀN HỆ THỐNG)                         -->
+        <!-- ========================================================================= -->
+        <div id="section-role-superadmin" style="display: none;">
+          <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));">
+            <div class="stat-card">
+              <div class="stat-label">Tổng số Tài khoản</div>
+              <div class="stat-value" id="sa-total-users">0</div>
+              <small style="color:var(--success);font-weight:600;" id="sa-active-users">0 đang hoạt động</small>
+            </div>
+            <div class="stat-card" style="border-left-color:#0f2942;">
+              <div class="stat-label">Tổng số Công việc</div>
+              <div class="stat-value" id="sa-total-tasks">0</div>
+              <small style="color:var(--slate-500);">Toàn đơn vị</small>
+            </div>
+            <div class="stat-card" style="border-left-color:#15803d;">
+              <div class="stat-label">Đã hoàn thành</div>
+              <div class="stat-value" id="sa-completed-tasks" style="color:var(--success);">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#2563eb;">
+              <div class="stat-label">Đang thực hiện</div>
+              <div class="stat-value" id="sa-inprogress-tasks">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#f59e0b;">
+              <div class="stat-label">Sắp đến hạn (48h)</div>
+              <div class="stat-value" id="sa-duesoon-tasks" style="color:#d97706;">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#b91c1c;">
+              <div class="stat-label">Nhiệm vụ Quá hạn</div>
+              <div class="stat-value" id="sa-overdue-tasks" style="color:var(--danger);">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#0369a1;">
+              <div class="stat-label">Chuỗi Định kỳ (Active)</div>
+              <div class="stat-value" id="sa-recurring-count">0</div>
+            </div>
           </div>
-          <p style="margin-bottom: 14px; color: var(--slate-700);">
-            Xin chào <strong id="welcome-name"></strong>! Bạn đang đăng nhập với quyền <span id="welcome-role" class="role-badge"></span>.
-          </p>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <a href="./pages/task-create.html" class="btn btn-primary">+ Tạo Công việc / Giao Nhiệm vụ Mới</a>
-            <a href="./pages/tasks.html" class="btn btn-outline">📋 Xem Danh sách Nhiệm vụ</a>
-            <a href="./pages/profile.html" class="btn btn-outline">👤 Hồ sơ & Liên kết Zalo Bot</a>
-            <a href="./pages/users.html" id="btn-goto-users" class="btn btn-outline">👥 Quản lý Cán bộ & Đơn vị</a>
+
+          <div class="form-grid" style="margin-bottom:20px;">
+            <div class="card" style="margin-bottom:0;">
+              <div class="card-title" style="margin-bottom:8px;">💬 Tình trạng Gửi Thông báo Zalo Bot & Gmail</div>
+              <div id="sa-zalo-status" style="font-size:13px;line-height:1.7;"></div>
+            </div>
+            <div class="card" style="margin-bottom:0;">
+              <div class="card-title" style="margin-bottom:8px;">📅 Tình trạng Đồng bộ Google Calendar</div>
+              <div id="sa-cal-status" style="font-size:13px;line-height:1.7;"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🏛️ Tình hình Thực hiện Nhiệm vụ theo Nhóm & Bộ phận (GROUPS)</div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Ký hiệu</th>
+                    <th>Tên Bộ phận / Đơn vị</th>
+                    <th>Tổng số việc</th>
+                    <th>Hoàn thành</th>
+                    <th>Đang thực hiện</th>
+                    <th>Quá hạn</th>
+                    <th>Tiến độ TB</th>
+                    <th>Tỷ lệ Hoàn thành</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-sa-groups"></tbody>
+              </table>
+            </div>
           </div>
         </div>
+
+        <!-- ========================================================================= -->
+        <!-- 2. DASHBOARD DÀNH CHO MANAGER (CÁN BỘ QUẢN LÝ)                            -->
+        <!-- ========================================================================= -->
+        <div id="section-role-manager" style="display: none;">
+          <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="stat-card">
+              <div class="stat-label">Nhiệm vụ đã giao</div>
+              <div class="stat-value" id="mg-assigned">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#2563eb;">
+              <div class="stat-label">Đang thực hiện</div>
+              <div class="stat-value" id="mg-inprogress">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#15803d;">
+              <div class="stat-label">Đã hoàn thành</div>
+              <div class="stat-value" id="mg-completed" style="color:var(--success);">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#b91c1c;">
+              <div class="stat-label">Nhiệm vụ Quá hạn</div>
+              <div class="stat-value" id="mg-overdue" style="color:var(--danger);">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#ea580c;">
+              <div class="stat-label">Cần xác nhận / Duyệt</div>
+              <div class="stat-value" id="mg-waiting-confirm" style="color:#ea580c;">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#d97706;">
+              <div class="stat-label">Cần nhắc báo cáo</div>
+              <div class="stat-value" id="mg-need-remind">0</div>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">✅ Nhiệm vụ Chờ Xác nhận Kết quả</div>
+                <a href="./pages/reports.html" class="btn btn-outline btn-sm">Mở trang Xét duyệt →</a>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table" style="min-width:480px;">
+                  <thead>
+                    <tr><th>Mã NV</th><th>Tên nhiệm vụ</th><th>Cán bộ</th><th>Tiến độ</th><th>Xử lý</th></tr>
+                  </thead>
+                  <tbody id="tbody-mg-confirm"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">📢 Nhiệm vụ Cần Nhắc Báo cáo Tiến độ</div>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table" style="min-width:480px;">
+                  <thead>
+                    <tr><th>Mã NV</th><th>Nhiệm vụ & Hạn</th><th>Cán bộ</th><th>Trạng thái</th><th>Đôn đốc</th></tr>
+                  </thead>
+                  <tbody id="tbody-mg-remind"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">👥 Tiến độ Thực hiện & Điểm Đánh giá của từng Cán bộ</div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Họ và tên Cán bộ</th>
+                    <th>Đơn vị</th>
+                    <th>Được giao</th>
+                    <th>Đang làm</th>
+                    <th>Hoàn thành</th>
+                    <th>Quá hạn</th>
+                    <th>Tiến độ TB</th>
+                    <th>Điểm Đánh giá TB</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-mg-staff"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- 3. DASHBOARD DÀNH CHO USER (NGƯỜI THỰC HIỆN NHIỆM VỤ)                     -->
+        <!-- ========================================================================= -->
+        <div id="section-role-user" style="display: none;">
+          <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));">
+            <div class="stat-card" style="border-left-color:#0f766e;">
+              <div class="stat-label">Công việc cá nhân</div>
+              <div class="stat-value" id="us-personal">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#1d4ed8;">
+              <div class="stat-label">Nhiệm vụ được giao</div>
+              <div class="stat-value" id="us-assigned">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#2563eb;">
+              <div class="stat-label">Đang thực hiện</div>
+              <div class="stat-value" id="us-inprogress">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#f59e0b;">
+              <div class="stat-label">Sắp đến hạn (48h)</div>
+              <div class="stat-value" id="us-duesoon" style="color:#d97706;">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#b91c1c;">
+              <div class="stat-label">Quá hạn</div>
+              <div class="stat-value" id="us-overdue" style="color:var(--danger);">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#15803d;">
+              <div class="stat-label">Đã hoàn thành</div>
+              <div class="stat-value" id="us-completed" style="color:var(--success);">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color:#0f2942;">
+              <div class="stat-label">Tiến độ Cá nhân TB</div>
+              <div class="stat-value" id="us-avg-progress">0%</div>
+            </div>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns: 2fr 1fr;">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">📋 Công việc Cá nhân & Nhiệm vụ Được giao Cần xử lý</div>
+                <a href="./pages/task-create.html" class="btn btn-primary btn-sm">+ Tạo Công việc Mới</a>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table" style="min-width:540px;">
+                  <thead>
+                    <tr><th>Mã NV</th><th>Tên công việc</th><th>Phân loại</th><th>Thời hạn</th><th>Tiến độ</th><th>Thao tác</th></tr>
+                  </thead>
+                  <tbody id="tbody-us-tasks"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">🔔 Thông báo & Nhắc việc Mới</div>
+                <a href="./pages/calendar.html" class="btn btn-outline btn-sm">📅 Mở Lịch</a>
+              </div>
+              <div id="box-us-notifications"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- 4. HỆ THỐNG 6 BIỂU ĐỒ THỐNG KÊ TRỰC QUAN BẰNG CHART.JS (DỮ LIỆU THẬT)     -->
+        <!-- ========================================================================= -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📊 Biểu đồ Phân tích & Thống kê Thực tế (Chart.js)</div>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
+            <div style="border:1px solid var(--slate-200);border-radius:10px;padding:16px;">
+              <div style="font-weight:700;color:var(--navy-800);margin-bottom:10px;">1. Biểu đồ Tỷ lệ Hoàn thành Nhiệm vụ</div>
+              <canvas id="chart-completion-rate" height="210"></canvas>
+            </div>
+
+            <div style="border:1px solid var(--slate-200);border-radius:10px;padding:16px;">
+              <div style="font-weight:700;color:var(--navy-800);margin-bottom:10px;">2. Biểu đồ Nhiệm vụ theo Trạng thái</div>
+              <canvas id="chart-status-dist" height="210"></canvas>
+            </div>
+
+            <div style="border:1px solid var(--slate-200);border-radius:10px;padding:16px;">
+              <div style="font-weight:700;color:var(--navy-800);margin-bottom:10px;">3. Biểu đồ Công việc theo Thời gian (7 ngày gần nhất)</div>
+              <canvas id="chart-timeline-trend" height="210"></canvas>
+            </div>
+
+            <div style="border:1px solid var(--slate-200);border-radius:10px;padding:16px;">
+              <div style="font-weight:700;color:var(--navy-800);margin-bottom:10px;">4. Biểu đồ So sánh Tiến độ giữa các Nhóm / Đơn vị</div>
+              <canvas id="chart-group-compare" height="210"></canvas>
+            </div>
+
+            <div style="border:1px solid var(--slate-200);border-radius:10px;padding:16px;">
+              <div style="font-weight:700;color:var(--navy-800);margin-bottom:10px;">5. Biểu đồ Nhiệm vụ Quá hạn & Đang xử lý theo Cán bộ</div>
+              <canvas id="chart-overdue" height="210"></canvas>
+            </div>
+
+            <div style="border:1px solid var(--slate-200);border-radius:10px;padding:16px;">
+              <div style="font-weight:700;color:var(--navy-800);margin-bottom:10px;">6. Biểu đồ Kết quả Thực hiện theo Tháng trong Năm</div>
+              <canvas id="chart-monthly-perf" height="210"></canvas>
+            </div>
+          </div>
+        </div>
+
       </main>
+    </div>
+  </div>
+
+  <!-- MODAL XUẤT 7 LOẠI BÁO CÁO RA EXCEL (.XLSX) HOẶC PDF (.PDF) -->
+  <div class="modal-backdrop" id="modal-export-report">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title">📥 Xuất Báo cáo & Dữ liệu (Excel .xlsx / PDF .pdf)</div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-export-report').classList.remove('open')">✕</button>
+      </div>
+      <form id="form-export-report">
+        <div class="form-group">
+          <label class="form-label">Chọn loại báo cáo cần kết xuất (Mục XV) *</label>
+          <select id="exp-report-type" class="form-control" required>
+            <option value="TASK_LIST">1. Danh sách tổng hợp nhiệm vụ</option>
+            <option value="PERSONAL_PROGRESS">2. Báo cáo tiến độ cá nhân</option>
+            <option value="GROUP_PROGRESS">3. Báo cáo tiến độ nhóm / bộ phận</option>
+            <option value="MONTHLY_SUMMARY">4. Báo cáo tổng hợp tháng</option>
+            <option value="YEARLY_SUMMARY">5. Báo cáo tổng hợp năm</option>
+            <option value="OVERDUE_REPORT">6. Báo cáo nhiệm vụ quá hạn</option>
+            <option value="EVALUATION_SCORES">7. Báo cáo đánh giá kết quả & chấm điểm</option>
+          </select>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Định dạng tệp xuất ra *</label>
+            <select id="exp-format" class="form-control">
+              <option value="EXCEL">📊 Microsoft Excel (.xlsx)</option>
+              <option value="PDF">📄 Tài liệu PDF chuẩn in ấn (.pdf)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phạm vi Bộ phận / Đơn vị</label>
+            <select id="exp-group-id" class="form-control">
+              <option value="ALL">Toàn bộ đơn vị / bộ phận</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Kỳ báo cáo Tháng (YYYY-MM)</label>
+            <input type="month" id="exp-month" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kỳ báo cáo Năm (YYYY)</label>
+            <input type="number" id="exp-year" class="form-control" value="2026" min="2024" max="2035">
+          </div>
+        </div>
+
+        <div id="exp-result-box"></div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-export-report').classList.remove('open')">Đóng</button>
+          <button type="submit" id="btn-do-export" class="btn btn-primary">📥 Kết xuất & Tải Báo cáo Ngay</button>
+        </div>
+      </form>
     </div>
   </div>
 
   <script src="./assets/js/api.js"></script>
   <script src="./assets/js/app.js"></script>
+  <script src="./assets/js/tasks.js"></script>
+  <script src="./assets/js/dashboard.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      const user = await App.initProtectedPage('dashboard', 'Bảng điều khiển trung tâm');
+      const user = await App.initProtectedPage('dashboard', 'Bảng điều khiển & Thống kê');
       if (!user) return;
 
-      document.getElementById('welcome-name').textContent = user.Full_Name;
-      const roleEl = document.getElementById('welcome-role');
-      roleEl.textContent = user.Role;
-      roleEl.className = 'role-badge role-' + user.Role;
+      const now = new Date();
+      document.getElementById('exp-month').value = now.toISOString().slice(0, 7);
+      document.getElementById('exp-year').value = now.getFullYear();
 
-      if (user.Role === 'USER') {
-        document.getElementById('btn-goto-users').style.display = 'none';
-      }
+      await DashboardController.init();
 
-      const taskRes = await ApiClient.call('tasks.list', {});
-      if (taskRes.success && taskRes.data.summary) {
-        const s = taskRes.data.summary;
-        document.getElementById('stat-total-tasks').textContent = s.total || 0;
-        document.getElementById('stat-inprogress-tasks').textContent = (s.pending || 0) + (s.inProgress || 0) + (s.waitingConfirm || 0);
-        document.getElementById('stat-completed-tasks').textContent = s.completed || 0;
-        document.getElementById('stat-overdue-tasks').textContent = s.overdue || 0;
-      }
+      document.getElementById('form-export-report').addEventListener('submit', (e) => {
+        DashboardController.executeExportReport(e);
+      });
     });
   </script>
 </body>

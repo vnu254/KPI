@@ -3,14 +3,21 @@
  * CHỨC NĂNG: Kết nối Fetch API từ GitHub Pages sang Google Apps Script (Không lỗi CORS).
  */
 
+// ===> BẠN DÁN LINK WEB APP (/exec) CỦA GOOGLE APPS SCRIPT VÀO DÒNG DƯỚI ĐÂY <===
+const DEFAULT_GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbyA9OVrXbXuWXlA1rf2n_WmtQCxOEuTdWt94gcAil5LCn3wNFmx8pjSAaNb4ujmz3YE/exec';
+
 const AppConfig = {
-  // Dán URL Web App (/exec) của Google Apps Script vào đây (hoặc nhập trực tiếp trên màn hình Đăng nhập)
-  GAS_WEB_APP_URL: localStorage.getItem('CUSTOM_GAS_URL') || 'https://script.google.com/macros/s/AKfycbyVSvb_sVa8SQEQeGvQOsLEyaMwfOAlYTQx5Eal27e4chSO84PlPj_8KlbWQVNXN9ZV/exec',
+  GAS_WEB_APP_URL: localStorage.getItem('CUSTOM_GAS_URL') || DEFAULT_GAS_EXEC_URL,
   REQUEST_TIMEOUT_MS: 30000,
   SESSION_STORAGE_KEY: 'INTERNAL_TASK_APP_SESSION'
 };
 
 const ApiClient = {
+  normalizeGasUrl(rawUrl) {
+    if (!rawUrl) return '';
+    return String(rawUrl).trim().replace(/\/macros\/u\/\d+\/s\//, '/macros/s/');
+  },
+
   getSession() {
     try {
       const raw = localStorage.getItem(AppConfig.SESSION_STORAGE_KEY);
@@ -34,16 +41,19 @@ const ApiClient = {
   },
 
   setGasUrl(url) {
-    if (url && url.trim()) {
-      localStorage.setItem('CUSTOM_GAS_URL', url.trim());
-      AppConfig.GAS_WEB_APP_URL = url.trim();
+    const cleanUrl = this.normalizeGasUrl(url);
+    if (cleanUrl) {
+      localStorage.setItem('CUSTOM_GAS_URL', cleanUrl);
+      AppConfig.GAS_WEB_APP_URL = cleanUrl;
     }
   },
 
   async call(action, payload = {}) {
-    const endpoint = localStorage.getItem('CUSTOM_GAS_URL') || AppConfig.GAS_WEB_APP_URL;
-    if (!endpoint || endpoint.includes('PASTE_YOUR_GOOGLE_APPS_SCRIPT')) {
-      throw new Error('Chưa cấu hình URL Google Apps Script (/exec). Vui lòng nhập URL tại mục Cấu hình kết nối.');
+    const rawEndpoint = localStorage.getItem('CUSTOM_GAS_URL') || AppConfig.GAS_WEB_APP_URL;
+    const endpoint = this.normalizeGasUrl(rawEndpoint);
+
+    if (!endpoint || endpoint.includes('PASTE_YOUR_') || endpoint.includes('THAY_MA_DEPLOYMENT')) {
+      throw new Error('Chưa cấu hình URL Google Apps Script (/exec). Vui lòng dán link vào dòng 6 của tệp assets/js/api.js hoặc nhập tại mục Cấu hình API URL.');
     }
 
     const controller = new AbortController();
@@ -61,6 +71,7 @@ const ApiClient = {
         method: 'POST',
         mode: 'cors',
         redirect: 'follow',
+        credentials: 'omit', // Chống lỗi xung đột khi trình duyệt đăng nhập nhiều Gmail
         headers: {
           'Content-Type': 'text/plain;charset=utf-8'
         },

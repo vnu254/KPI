@@ -1,12 +1,13 @@
 /**
  * TỆP: assets/js/app.js
- * CHỨC NĂNG: Quản lý khung giao diện Sidebar, Topbar, kiểm tra phiên và điều hướng an toàn (Giai đoạn 5).
+ * CHỨC NĂNG: Quản lý khung giao diện Sidebar, Topbar, kiểm tra phiên và điều hướng an toàn (Giai đoạn 7).
  */
 
 const App = {
   currentUser: null,
   groups: [],
-  enabledPages: ['dashboard', 'users', 'profile', 'tasks', 'reports'],
+  // Đã mở khóa đầy đủ các phân hệ đến Giai đoạn 7
+  enabledPages: ['dashboard', 'users', 'profile', 'tasks', 'reports', 'calendar', 'settings'],
 
   getRootPrefix() {
     return window.location.pathname.includes('/pages/') ? '../' : './';
@@ -96,7 +97,7 @@ const App = {
           ${isAdmin ? `<a href="${root}pages/settings.html" data-page="settings" class="nav-item ${activeKey === 'settings' ? 'active' : ''}">⚙️ Cấu hình Hệ thống</a>` : ''}
         </div>
         <div class="sidebar-footer">
-          <div>Phiên bản: 5.0 (Báo cáo & Đánh giá)</div>
+          <div>Phiên bản: 7.0 (Zalo Bot & Cấu hình)</div>
           <div>Trạng thái Zalo: <strong>${u.Zalo_Linked ? 'Đã liên kết' : 'Chưa liên kết'}</strong></div>
         </div>
       `;

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cấu hình Hệ thống & Quản trị Zalo Bot</title>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+  <style>
+    .settings-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .settings-grid-2col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .status-pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .status-SENT, .status-SUCCESS { background: #dcfce7; color: #166534; }
+    .status-FAILED, .status-ERROR { background: #fee2e2; color: #991b1b; }
+    .status-PENDING { background: #fef9c3; color: #854d0e; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="app-sidebar" id="app-sidebar"></aside>
+    <div class="app-main">
+      <header class="app-topbar" id="app-topbar"></header>
+      <main class="app-content">
+        <!-- Thẻ KPI Thống kê Zalo Bot, Calendar & Email -->
+        <div class="settings-kpi-grid">
+          <div class="card kpi-card">
+            <div class="kpi-label">Tin nhắn Zalo đã gửi</div>
+            <div class="kpi-value" style="color: #16a34a;" id="stat-zalo-sent">0</div>
+            <div style="font-size: 12px; color: #64748b;" id="stat-zalo-total">Tổng: 0 bản ghi</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="kpi-label">Tin nhắn Zalo báo lỗi</div>
+            <div class="kpi-value" style="color: #dc2626;" id="stat-zalo-failed">0</div>
+            <div style="font-size: 12px; color: #64748b;">Có thể bấm gửi lại bên dưới</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="kpi-label">Cán bộ đã liên kết Zalo</div>
+            <div class="kpi-value" style="color: #2563eb;" id="stat-linked-users">0 / 0</div>
+            <div style="font-size: 12px; color: #64748b;">Tài khoản có Zalo Chat ID</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="kpi-label">Đồng bộ Google Calendar</div>
+            <div class="kpi-value" style="color: #7c3aed;" id="stat-synced-cal">0 / 0</div>
+            <div style="font-size: 12px; color: #64748b;" id="stat-email-quota">Quota Email: --</div>
+          </div>
+        </div>
+
+        <!-- Khung cấu hình 2 cột -->
+        <div class="settings-grid-2col">
+          <!-- Cột 1: Cấu hình Zalo Bot & Google Calendar -->
+          <div class="card" style="padding: 20px;">
+            <h3 style="margin-top: 0; margin-bottom: 16px;">🤖 Cấu hình Kết nối Zalo Bot & Lịch Đơn vị</h3>
+            <form id="form-system-settings">
+              <div class="form-group">
+                <label>Zalo Bot Token (Để trống nếu giữ nguyên Token hiện tại: <span id="lbl-masked-token" style="color:#2563eb;"></span>)</label>
+                <input type="password" id="cfg-bot-token" class="form-control" placeholder="Nhập Bot Token mới nếu muốn thay đổi...">
+              </div>
+              <div class="form-group">
+                <label>Zalo Bot API Endpoint</label>
+                <input type="text" id="cfg-api-url" class="form-control" placeholder="https://bot-api.zapps.me/bot">
+              </div>
+              <div class="form-group">
+                <label>Zalo Chat ID mặc định của Quản trị viên (Nhận cảnh báo hệ thống)</label>
+                <input type="text" id="cfg-admin-chatid" class="form-control" placeholder="Nhập Zalo Chat ID của Admin...">
+              </div>
+              <div class="form-group">
+                <label>Google Calendar ID của Đơn vị (Mặc định: primary)</label>
+                <input type="text" id="cfg-calendar-id" class="form-control" placeholder="primary">
+              </div>
+              <div class="form-group">
+                <label>Thời gian nhắc trước hạn (Giờ) & Thời hạn phiên đăng nhập (Giờ)</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <input type="number" id="cfg-remind-hours" class="form-control" min="1" max="168" value="24" title="Nhắc trước bao nhiêu giờ">
+                  <input type="number" id="cfg-session-hours" class="form-control" min="1" max="720" value="24" title="Thời hạn phiên đăng nhập">
+                </div>
+              </div>
+              <div class="form-group" style="display: flex; gap: 20px; align-items: center; margin-top: 10px;">
+                <label style="display:flex; align-items:center; gap:6px; font-weight:500;">
+                  <input type="checkbox" id="cfg-auto-remind" checked> Tự động quét nhắc hạn
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-weight:500;">
+                  <input type="checkbox" id="cfg-email-fallback" checked> Bật Gmail dự phòng khi Zalo lỗi
+                </label>
+              </div>
+              <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary">💾 Lưu cấu hình hệ thống</button>
+                <button type="button" class="btn btn-outline" id="btn-test-admin-zalo">📨 Gửi tin Zalo thử nghiệm</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Cột 2: Điều khiển Trigger Tự động hóa & Bảo trì CSDL -->
+          <div class="card" style="padding: 20px;">
+            <h3 style="margin-top: 0; margin-bottom: 16px;">⚡ Điều hành Tự động hóa & Bảo trì Hệ thống</h3>
+            <p style="font-size: 13px; color: #475569; line-height: 1.6;">
+              Kích hoạt các tác vụ chạy ngầm hằng ngày để hệ thống tự động quét công việc sắp đến hạn (trong 24h), cảnh báo công việc quá hạn qua Zalo Bot và kiểm tra tính toàn vẹn của 16 bảng dữ liệu Google Sheets.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; margin: 18px 0;">
+              <button class="btn btn-primary" id="btn-run-reminder-now">
+                🔔 Quét & Gửi thông báo Nhắc hạn / Quá hạn ngay lập tức
+              </button>
+              <button class="btn btn-outline" id="btn-install-triggers">
+                ⏰ Cài đặt Trigger Tự động chạy hằng ngày (07:00 sáng)
+              </button>
+              <button class="btn btn-outline" id="btn-verify-db">
+                🛠️ Kiểm tra & Chuẩn hóa cấu trúc 16 bảng dữ liệu (Database)
+              </button>
+            </div>
+
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="font-weight: 600; font-size: 13px; margin-bottom: 8px;">Danh sách Trigger đang hoạt động:</div>
+              <ul id="trigger-list-ul" style="margin: 0; padding-left: 18px; font-size: 13px; color: #334155;">
+                <li>Đang tải...</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bảng Nhật ký Gửi thông báo Zalo Bot (Bảng Notifications) -->
+        <div class="card" style="padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0;">📜 Nhật ký Thông báo Zalo Bot gần đây (Bảng Notifications)</h3>
+            <button class="btn btn-outline btn-sm" id="btn-refresh-settings">🔄 Làm mới dữ liệu</button>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: #f1f5f9; text-align: left;">
+                  <th style="padding: 10px;">Thời gian</th>
+                  <th style="padding: 10px;">Loại thông báo</th>
+                  <th style="padding: 10px;">Người nhận</th>
+                  <th style="padding: 10px;">Zalo Chat ID</th>
+                  <th style="padding: 10px;">Tiêu đề / Nội dung</th>
+                  <th style="padding: 10px;">Trạng thái</th>
+                  <th style="padding: 10px;">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="notif-log-tbody">
+                <tr><td colspan="7" style="padding: 16px; text-align: center;">Đang tải nhật ký thông báo...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/settings.js"></script>
+</body>
+</html>

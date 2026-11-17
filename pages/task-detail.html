@@ -258,11 +258,15 @@ if (t.Is_Assignee && t.Status !== 'COMPLETED' && t.Status !== 'CANCELLED') {
       if (t.Status === 'PENDING' && t.Is_Assignee) {
         btnsHtml += `<button class="btn btn-primary btn-sm" onclick="handleAcceptTask()">✋ Xác nhận Tiếp nhận</button>`;
       }
-      if (t.Can_Modify) {
+     if (t.Can_Modify) {
+        if (t.Recurring_ID) {
+          btnsHtml += `<button class="btn btn-primary btn-sm" onclick="openScopeEditModal()">🔁 Sửa theo Phạm vi Chuỗi</button>`;
+        }
+        // ĐOẠN NÀY LÀ QUAN TRỌNG: Link dẫn tới task-create.html kèm tham số id=
         btnsHtml += `
-          <button class="btn btn-primary btn-sm" onclick="handleRequestReportZalo()">📢 Nhắc Báo cáo (Zalo Bot)</button>
           <a href="./task-create.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-outline btn-sm">✏️ Sửa</a>
           <button class="btn btn-outline btn-sm" onclick="openExtendModal()">⏳ Gia hạn</button>
+          <button class="btn btn-outline btn-sm" onclick="openTransferModal()">🔄 Chuyển giao</button>
           <button class="btn btn-danger btn-sm" onclick="handleCancelTask()">🚫 Hủy việc</button>
         `;
       }

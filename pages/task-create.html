@@ -267,6 +267,24 @@
       document.getElementById('t-start-date').value = today;
       document.getElementById('t-due-date').value = today;
 
+      // 1. Tải danh sách đơn vị và cán bộ TRƯỚC (Bắt buộc phải await xong)
+      const usrRes = await ApiClient.call('users.list');
+      if (usrRes.success) {
+        const groups = usrRes.data.groups || [];
+        const users = usrRes.data.users || [];
+
+        document.getElementById('t-group').innerHTML = groups.map(g =>
+          `<option value="${App.escapeHtml(g.Group_ID)}">${App.escapeHtml(g.Group_Code)} - ${App.escapeHtml(g.Group_Name)}</option>`
+        ).join('');
+
+        const userOpts = users.map(u =>
+          `<option value="${App.escapeHtml(u.User_ID)}">${App.escapeHtml(u.Full_Name)} (${App.escapeHtml(u.Position || u.Role)})</option>`
+        ).join('');
+        document.getElementById('t-primary-assignee').innerHTML = userOpts;
+        document.getElementById('t-cooperators').innerHTML = userOpts;
+      }
+
+      // 2. Thiết lập giao diện mặc định
       if (user.Role === 'USER') {
         document.getElementById('opt-assigned').disabled = true;
         document.getElementById('opt-group').disabled = true;
@@ -288,55 +306,59 @@
       document.getElementById('t-nature').addEventListener('change', toggleRecurringSection);
       document.getElementById('rec-freq').addEventListener('change', toggleFrequencySubFields);
 
-      const usrRes = await ApiClient.call('users.list');
-      if (usrRes.success) {
-        const groups = usrRes.data.groups || [];
-        const users = usrRes.data.users || [];
-
-        document.getElementById('t-group').innerHTML = groups.map(g =>
-          `<option value="${App.escapeHtml(g.Group_ID)}">${App.escapeHtml(g.Group_Code)} - ${App.escapeHtml(g.Group_Name)}</option>`
-        ).join('');
-
-        const userOpts = users.map(u =>
-          `<option value="${App.escapeHtml(u.User_ID)}">${App.escapeHtml(u.Full_Name)} (${App.escapeHtml(u.Position || u.Role)})</option>`
-        ).join('');
-        document.getElementById('t-primary-assignee').innerHTML = userOpts;
-        document.getElementById('t-cooperators').innerHTML = userOpts;
-      }
-
+      // 3. NẾU LÀ CHẾ ĐỘ SỬA: Điền dữ liệu nhiệm vụ SAU KHI dropdown đã có danh sách cán bộ
       editingTaskId = params.get('id') || '';
       if (editingTaskId) {
         document.getElementById('form-heading').textContent = 'Chỉnh sửa Công việc: ' + editingTaskId;
         const detailRes = await ApiClient.call('tasks.detail', { taskId: editingTaskId });
-        if (detailRes.success) {
+        
+        if (detailRes.success && detailRes.data && detailRes.data.task) {
           const t = detailRes.data.task;
           const members = detailRes.data.members || [];
-          document.getElementById('t-category').value = t.Task_Category;
+          
+          // Điền các trường văn bản và thời gian
+          document.getElementById('t-category').value = t.Task_Category || 'ASSIGNED';
           toggleAssignmentSection();
-          document.getElementById('t-nature').value = t.Task_Nature;
+          
+          document.getElementById('t-nature').value = t.Task_Nature || 'REGULAR';
           toggleRecurringSection();
-          document.getElementById('t-priority').value = t.Priority;
-          document.getElementById('t-title').value = t.Title;
-          document.getElementById('t-desc').value = t.Description;
-          document.getElementById('t-group').value = t.Group_ID;
-          document.getElementById('t-primary-assignee').value = t.Primary_Assignee_ID;
+          
+          document.getElementById('t-priority').value = t.Priority || 'MEDIUM';
+          document.getElementById('t-title').value = t.Title || '';
+          document.getElementById('t-desc').value = t.Description || '';
+          document.getElementById('t-group').value = t.Group_ID || '';
+          
+          // Điền người chủ trì (chỉ chạy mượt khi dropdown đã được tải ở Bước 1)
+          if (t.Primary_Assignee_ID) {
+            document.getElementById('t-primary-assignee').value = t.Primary_Assignee_ID;
+          }
+          
           document.getElementById('t-require-approval').checked = Boolean(t.Require_Approval);
-          document.getElementById('t-start-date').value = t.Start_Date;
-          document.getElementById('t-due-date').value = t.Due_Date;
-          document.getElementById('t-due-time').value = t.Due_Time;
-          document.getElementById('t-remind-mins').value = (t.Remind_Before_Mins || [1440, 120, 30]).join(', ');
+          
+          if (t.Start_Date) document.getElementById('t-start-date').value = t.Start_Date;
+          if (t.Due_Date) document.getElementById('t-due-date').value = t.Due_Date;
+          if (t.Due_Time) document.getElementById('t-due-time').value = t.Due_Time;
+          
+          const remindArr = t.Remind_Before_Mins || [1440, 120, 30];
+          document.getElementById('t-remind-mins').value = remindArr.join(', ');
           document.getElementById('t-notes').value = t.Notes || '';
 
+          // Đánh dấu người phối hợp (Multiple Select)
           const coopIds = members.filter(m => m.Member_Role === 'COOPERATOR').map(m => m.User_ID);
-          Array.from(document.getElementById('t-cooperators').options).forEach(opt => {
+          const coopSelect = document.getElementById('t-cooperators');
+          Array.from(coopSelect.options).forEach(opt => {
             opt.selected = coopIds.includes(opt.value);
           });
 
-          savedAttachments = t.Attachments || [];
+          // Hiển thị tệp đính kèm
+          savedAttachments = Array.isArray(t.Attachments) ? t.Attachments : [];
           renderSavedAttachments();
+        } else {
+          App.toast('Lỗi tải dữ liệu nhiệm vụ: ' + (detailRes.message || 'Không xác định'), 'error');
         }
       }
 
+      // Xử lý gửi biểu mẫu
       document.getElementById('form-task').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-save-task');

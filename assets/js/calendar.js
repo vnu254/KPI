@@ -1,172 +1,149 @@
 /**
  * TỆP: assets/js/calendar.js
- * CHỨC NĂNG: Điều khiển giao diện FullCalendar, lọc sự kiện, đồng bộ Google Calendar và gửi Email nhắc việc (Giai đoạn 6).
+ * CHỨC NĂNG: Tích hợp thư viện FullCalendar hiển thị Lịch cá nhân, Lịch nhiệm vụ giao,
+ *            Lịch nhiệm vụ nhóm và điều khiển đồng bộ Google Calendar + Gmail.
  */
 
-const CalendarPage = {
-  calendarInstance: null,
-  rawEvents: [],
-  selectedTaskProps: null,
+let calendarInstance = null;
+let cachedCalendarEvents = [];
+let selectedEventTaskId = '';
 
+const CalendarController = {
   async init() {
-    const user = await App.initProtectedPage('calendar', 'Lịch công việc & Đồng bộ Google Calendar');
-    if (!user) return;
+    const calendarEl = document.getElementById('fullcalendar-box');
+    if (!calendarEl) return;
 
-    this.bindEvents();
-    this.initFullCalendar();
-    await this.loadCalendarEvents();
-  },
-
-  bindEvents() {
-    document.getElementById('btn-cal-refresh').addEventListener('click', () => this.loadCalendarEvents());
-    document.getElementById('filter-cal-status').addEventListener('change', () => this.applyClientFilters());
-    document.getElementById('filter-cal-priority').addEventListener('change', () => this.applyClientFilters());
-
-    document.getElementById('btn-sync-all-calendar').addEventListener('click', async () => {
-      try {
-        App.toast('Đang đồng bộ dữ liệu lên Google Calendar...', 'info');
-        const res = await ApiClient.call('calendar.syncAll', {});
-        if (res.success) {
-          App.toast(res.message, 'success');
-          await this.loadCalendarEvents();
-        }
-      } catch (err) {
-        App.toast(err.message, 'error');
-      }
-    });
-
-    document.getElementById('btn-close-event-modal').addEventListener('click', () => {
-      document.getElementById('event-detail-modal').style.display = 'none';
-    });
-
-    document.getElementById('btn-sync-single-event').addEventListener('click', async () => {
-      if (!this.selectedTaskProps || !this.selectedTaskProps.taskId) return;
-      try {
-        const res = await ApiClient.call('calendar.syncTask', { taskId: this.selectedTaskProps.taskId });
-        if (res.success) {
-          App.toast(res.message, 'success');
-          await this.loadCalendarEvents();
-          document.getElementById('event-detail-modal').style.display = 'none';
-        }
-      } catch (err) {
-        App.toast(err.message, 'error');
-      }
-    });
-
-    document.getElementById('btn-send-email-reminder').addEventListener('click', async () => {
-      if (!this.selectedTaskProps || !this.selectedTaskProps.taskId) return;
-      const note = prompt(
-        'Nhập nội dung nhắc việc gửi qua Email cho ' + this.selectedTaskProps.assigneeName + ':',
-        'Đề nghị đồng chí khẩn trương hoàn thành nhiệm vụ và báo cáo kết quả đúng thời hạn.'
-      );
-      if (note === null) return;
-
-      try {
-        const res = await ApiClient.call('calendar.sendEmailReminder', {
-          taskId: this.selectedTaskProps.taskId,
-          note: note
-        });
-        if (res.success) {
-          App.toast(res.message, 'success');
-        }
-      } catch (err) {
-        App.toast(err.message, 'error');
-      }
-    });
-  },
-
-  initFullCalendar() {
-    const container = document.getElementById('fullcalendar-container');
-    this.calendarInstance = new FullCalendar.Calendar(container, {
+    calendarInstance = new FullCalendar.Calendar(calendarEl, {
+      initialView: window.innerWidth < 768 ? 'listMonth' : 'dayGridMonth',
       locale: 'vi',
-      initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
+      firstDay: 1, // Bắt đầu tuần từ Thứ Hai
+      height: 'auto',
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listWeek'
+        right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
       },
       buttonText: {
         today: 'Hôm nay',
         month: 'Tháng',
         week: 'Tuần',
-        list: 'Danh sách'
+        day: 'Ngày',
+        list: 'Lịch biểu'
       },
-      events: [],
       eventClick: (info) => {
         this.openEventModal(info.event);
       }
     });
 
-    this.calendarInstance.render();
+    calendarInstance.render();
+    await this.loadFilterDropdowns();
+    await this.refreshEvents();
+    await this.loadGmailQuota();
   },
 
-  async loadCalendarEvents() {
-    try {
-      const res = await ApiClient.call('calendar.listEvents', {});
-      if (!res.success) return;
-
-      this.rawEvents = res.data.events || [];
-      const stats = res.data.stats || {};
-
-      document.getElementById('cal-kpi-total').textContent = stats.totalEvents || 0;
-      document.getElementById('cal-kpi-completed').textContent = stats.completed || 0;
-      document.getElementById('cal-kpi-overdue').textContent = stats.overdue || 0;
-      document.getElementById('cal-kpi-synced').textContent = stats.syncedCalendar || 0;
-
-      this.applyClientFilters();
-    } catch (err) {
-      App.toast('Lỗi tải lịch công việc: ' + err.message, 'error');
+  async loadFilterDropdowns() {
+    const res = await ApiClient.call('groups.list');
+    if (res.success) {
+      const groups = res.data.groups || [];
+      const sel = document.getElementById('cal-flt-group');
+      if (sel) {
+        sel.innerHTML = '<option value="ALL">Tất cả đơn vị / bộ phận</option>' +
+          groups.map(g => `<option value="${App.escapeHtml(g.Group_ID)}">${App.escapeHtml(g.Group_Code)} - ${App.escapeHtml(g.Group_Name)}</option>`).join('');
+      }
     }
   },
 
-  applyClientFilters() {
-    const stFilter = document.getElementById('filter-cal-status').value;
-    const priFilter = document.getElementById('filter-cal-priority').value;
-
-    const filtered = this.rawEvents.filter(ev => {
-      const p = ev.extendedProps || {};
-      if (p.eventType === 'HOLIDAY') return true;
-      if (stFilter && p.status !== stFilter) return false;
-      if (priFilter && p.priority !== priFilter) return false;
-      return true;
-    });
-
-    this.calendarInstance.removeAllEvents();
-    this.calendarInstance.addEventSource(filtered);
+  async loadGmailQuota() {
+    const res = await ApiClient.call('gmail.quota');
+    if (res.success && res.data) {
+      const el = document.getElementById('gmail-quota-badge');
+      if (el) {
+        el.textContent = `Hạn mức Gmail còn lại hôm nay: ${res.data.remainingQuota} email`;
+      }
+    }
   },
 
-  openEventModal(eventObj) {
-    const p = eventObj.extendedProps || {};
-    const modal = document.getElementById('event-detail-modal');
-    const body = document.getElementById('modal-event-body');
+  async refreshEvents() {
+    const scope = document.getElementById('cal-flt-scope').value;
+    const groupId = document.getElementById('cal-flt-group').value;
+    const status = document.getElementById('cal-flt-status').value;
 
-    if (p.eventType === 'HOLIDAY') {
-      document.getElementById('modal-event-title').textContent = p.title;
-      body.innerHTML = `<p>${App.escapeHtml(p.description)}</p>`;
-      document.getElementById('btn-sync-single-event').style.display = 'none';
-      document.getElementById('btn-send-email-reminder').style.display = 'none';
-      modal.style.display = 'flex';
+    const res = await ApiClient.call('calendar.events', {
+      calendarScope: scope,
+      groupId: groupId,
+      status: status
+    });
+
+    if (!res.success) {
+      App.toast(res.message, 'error');
       return;
     }
 
-    this.selectedTaskProps = p;
-    document.getElementById('btn-sync-single-event').style.display = 'inline-block';
-    document.getElementById('btn-send-email-reminder').style.display = 'inline-block';
+    cachedCalendarEvents = res.data.events || [];
+    const syncLogs = res.data.syncLogs || [];
 
-    document.getElementById('modal-event-title').textContent = `Nhiệm vụ: ${p.taskId}`;
-    body.innerHTML = `
-      <div><strong>Nội dung:</strong> ${App.escapeHtml(p.title)}</div>
-      <div><strong>Người thực hiện:</strong> ${App.escapeHtml(p.assigneeName)}</div>
-      <div><strong>Mức độ ưu tiên:</strong> <span class="badge">${App.escapeHtml(p.priority)}</span></div>
-      <div><strong>Trạng thái:</strong> ${App.escapeHtml(p.status)} (${p.progress}%)</div>
-      <div><strong>Hạn hoàn thành:</strong> <span style="color:#dc2626;font-weight:bold;">${App.escapeHtml(p.dueDateStr)}</span></div>
-      <div><strong>Đồng bộ Google Calendar:</strong> ${p.calendarEventId ? '✅ Đã đồng bộ' : '⚪ Chưa đồng bộ'}</div>
-      <hr style="margin: 10px 0; border: 0; border-top: 1px solid #e2e8f0;">
-      <div><strong>Mô tả chi tiết:</strong><br>${App.escapeHtml(p.description || 'Không có mô tả')}</div>
+    if (calendarInstance) {
+      calendarInstance.removeAllEvents();
+      calendarInstance.addEventSource(cachedCalendarEvents);
+    }
+
+    this.renderSyncLogsTable(syncLogs);
+  },
+
+  renderSyncLogsTable(logs) {
+    const tbody = document.getElementById('tbody-calendar-logs');
+    if (!tbody) return;
+
+    if (!logs || logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:18px;color:#64748b;">Chưa có bản ghi đồng bộ Google Calendar nào.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = logs.map(l => `
+      <tr>
+        <td><code>${App.escapeHtml(l.Sync_ID)}</code></td>
+        <td><a href="./task-detail.html?id=${encodeURIComponent(l.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(l.Task_ID)}</a></td>
+        <td><strong>${App.escapeHtml(l.Event_Title)}</strong></td>
+        <td><small>${App.escapeHtml(l.Start_Time)} → ${App.escapeHtml(l.End_Time)}</small></td>
+        <td>
+          <span class="status-badge status-${l.Sync_Status === 'SYNC_ERROR' ? 'LOCKED' : 'ACTIVE'}">
+            ${App.escapeHtml(l.Sync_Status)}
+          </span>
+          ${l.Error_Log ? `<div style="font-size:11px;color:var(--danger);">${App.escapeHtml(l.Error_Log)}</div>` : ''}
+        </td>
+        <td><small>${App.escapeHtml(l.Last_Synced_At)}</small></td>
+      </tr>
+    `).join('');
+  },
+
+  openEventModal(fcEvent) {
+    const p = fcEvent.extendedProps || {};
+    selectedEventTaskId = p.Task_ID;
+
+    document.getElementById('ev-modal-title').textContent = p.Raw_Title || fcEvent.title;
+    document.getElementById('ev-modal-body').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><small style="color:var(--slate-500);">Mã nhiệm vụ:</small><br><strong>${App.escapeHtml(p.Task_ID)}</strong></div>
+        <div><small style="color:var(--slate-500);">Phân loại:</small><br>${TaskUI.renderCategoryBadge(p.Task_Category)}</div>
+        <div><small style="color:var(--slate-500);">Người giao:</small><br><strong>${App.escapeHtml(p.Assigner_Name)}</strong></div>
+        <div><small style="color:var(--slate-500);">Người thực hiện:</small><br><strong>${App.escapeHtml(p.Primary_Assignee_Name)}</strong></div>
+        <div><small style="color:var(--slate-500);">Đơn vị:</small><br><strong>${App.escapeHtml(p.Group_Name)}</strong></div>
+        <div><small style="color:var(--slate-500);">Thời hạn:</small><br><strong style="color:var(--danger);">${TaskUI.formatVnDate(p.Due_Date, p.Due_Time)}</strong></div>
+        <div><small style="color:var(--slate-500);">Trạng thái:</small><br>${TaskUI.renderStatusBadge(p.Status)}</div>
+        <div><small style="color:var(--slate-500);">Tiến độ:</small><br>${TaskUI.renderProgressBar(p.Progress)}</div>
+      </div>
+      <div style="padding:10px 12px;background:var(--slate-100);border-radius:8px;font-size:12px;">
+        <strong>Trạng thái Google Calendar:</strong>
+        ${p.Calendar_Synced
+          ? `<span style="color:var(--success);font-weight:700;">✅ Đã đồng bộ (${App.escapeHtml(p.Last_Synced_At)})</span>`
+          : `<span style="color:var(--warning);font-weight:700;">⏳ Chưa đồng bộ</span>`
+        }
+      </div>
     `;
 
-    modal.style.display = 'flex';
+    document.getElementById('btn-ev-goto-detail').href = `./task-detail.html?id=${encodeURIComponent(p.Task_ID)}`;
+    document.getElementById('modal-cal-event').classList.add('open');
   }
 };
 
-window.addEventListener('DOMContentLoaded', () => CalendarPage.init());
+window.CalendarController = CalendarController;

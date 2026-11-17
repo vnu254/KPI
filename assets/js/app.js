@@ -1,13 +1,13 @@
 /**
  * TỆP: assets/js/app.js
- * CHỨC NĂNG: Quản lý khung giao diện Sidebar, Topbar, kiểm tra phiên và điều hướng an toàn (Giai đoạn 7).
+ * CHỨC NĂNG: Quản lý khung giao diện Sidebar, Topbar (Kèm chuông thông báo), kiểm tra phiên và điều hướng.
  */
 
 const App = {
   currentUser: null,
   groups: [],
-  // Đã mở khóa đầy đủ các phân hệ đến Giai đoạn 7
-  enabledPages: ['dashboard', 'users', 'profile', 'tasks', 'reports', 'calendar', 'settings'],
+  unreadCount: 0,
+  enabledPages: ['dashboard', 'users', 'profile', 'tasks', 'reports', 'calendar', 'notifications', 'settings'],
 
   getRootPrefix() {
     return window.location.pathname.includes('/pages/') ? '../' : './';
@@ -57,6 +57,7 @@ const App = {
 
       this.currentUser = res.data.user;
       this.groups = res.data.groups || [];
+      this.unreadCount = Number(res.data.unreadNotificationsCount) || 0;
       sess.user = this.currentUser;
       ApiClient.saveSession(sess);
 
@@ -73,6 +74,9 @@ const App = {
     const u = this.currentUser;
     const isAdmin = u.Role === 'SUPER_ADMIN';
     const isManagerOrAdmin = (u.Role === 'SUPER_ADMIN' || u.Role === 'MANAGER');
+    const badgeHtml = this.unreadCount > 0
+      ? `<span style="background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:auto;">${this.unreadCount}</span>`
+      : '';
 
     const sidebarEl = document.getElementById('app-sidebar');
     if (sidebarEl) {
@@ -90,27 +94,20 @@ const App = {
           <a href="${root}pages/tasks.html" data-page="tasks" class="nav-item ${activeKey === 'tasks' ? 'active' : ''}">📋 Quản lý Công việc</a>
           <a href="${root}pages/calendar.html" data-page="calendar" class="nav-item ${activeKey === 'calendar' ? 'active' : ''}">📅 Lịch công việc</a>
           <a href="${root}pages/reports.html" data-page="reports" class="nav-item ${activeKey === 'reports' ? 'active' : ''}">📈 Báo cáo & Đánh giá</a>
+          <a href="${root}pages/notifications.html" data-page="notifications" class="nav-item ${activeKey === 'notifications' ? 'active' : ''}">
+            🔔 Thông báo & Zalo Bot ${badgeHtml}
+          </a>
 
-          <div class="nav-section-label">Tổ chức & Cá nhân</div>
+          <div class="nav-section-label">Tổ chức & Hệ thống</div>
           ${isManagerOrAdmin ? `<a href="${root}pages/users.html" data-page="users" class="nav-item ${activeKey === 'users' ? 'active' : ''}">👥 Quản lý Cán bộ & Đơn vị</a>` : ''}
-          <a href="${root}pages/profile.html" data-page="profile" class="nav-item ${activeKey === 'profile' ? 'active' : ''}">👤 Hồ sơ & Liên kết Zalo Bot</a>
-          ${isAdmin ? `<a href="${root}pages/settings.html" data-page="settings" class="nav-item ${activeKey === 'settings' ? 'active' : ''}">⚙️ Cấu hình Hệ thống</a>` : ''}
+          <a href="${root}pages/profile.html" data-page="profile" class="nav-item ${activeKey === 'profile' ? 'active' : ''}">👤 Hồ sơ & Liên kết Zalo</a>
+          ${isAdmin ? `<a href="${root}pages/settings.html" data-page="settings" class="nav-item ${activeKey === 'settings' ? 'active' : ''}">⚙️ Cài đặt Hệ thống</a>` : ''}
         </div>
         <div class="sidebar-footer">
-          <div>Phiên bản: 7.0 (Zalo Bot & Cấu hình)</div>
-          <div>Trạng thái Zalo: <strong>${u.Zalo_Linked ? 'Đã liên kết' : 'Chưa liên kết'}</strong></div>
+          <div>Phiên bản: 7.0 (Tự động hóa & Settings)</div>
+          <div>Trạng thái Zalo: <strong>${u.Zalo_Linked ? '✅ Đã liên kết' : '⚠️ Chưa liên kết'}</strong></div>
         </div>
       `;
-
-      sidebarEl.querySelectorAll('.nav-item').forEach(link => {
-        link.addEventListener('click', (e) => {
-          const pageKey = link.getAttribute('data-page');
-          if (pageKey && !this.enabledPages.includes(pageKey)) {
-            e.preventDefault();
-            this.toast('Phân hệ này sẽ được kích hoạt ở giai đoạn tiếp theo.', 'error');
-          }
-        });
-      });
     }
 
     const topbarEl = document.getElementById('app-topbar');
@@ -121,6 +118,10 @@ const App = {
           <div class="page-heading">${this.escapeHtml(pageTitle)}</div>
         </div>
         <div class="topbar-right">
+          <a href="${root}pages/notifications.html" class="btn btn-outline btn-sm" style="position:relative;">
+            🔔 Thông báo
+            ${this.unreadCount > 0 ? `<span style="background:var(--danger);color:#fff;padding:1px 6px;border-radius:10px;font-size:11px;">${this.unreadCount}</span>` : ''}
+          </a>
           <div class="user-pill">
             <span><strong>${this.escapeHtml(u.Full_Name)}</strong></span>
             <span class="role-badge role-${this.escapeHtml(u.Role)}">${this.escapeHtml(u.Role)}</span>

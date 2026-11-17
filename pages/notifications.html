@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trung tâm Thông báo & Lịch sử Zalo Bot</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main-wrapper">
+      <header class="topbar" id="app-topbar"></header>
+      <main class="content-container">
+
+        <!-- THẺ THỐNG KÊ THÔNG BÁO -->
+        <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="stat-card">
+            <div class="stat-label">Tổng số Thông báo</div>
+            <div class="stat-value" id="ntf-st-total">0</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #2563eb;">
+            <div class="stat-label">Đã gửi qua Zalo Bot</div>
+            <div class="stat-value" id="ntf-st-zalo">0</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #0369a1;">
+            <div class="stat-label">Đã gửi Gmail / Dự phòng</div>
+            <div class="stat-value" id="ntf-st-email">0</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #b91c1c;">
+            <div class="stat-label">Gửi lỗi (Cần kiểm tra)</div>
+            <div class="stat-value" id="ntf-st-failed" style="color: var(--danger);">0</div>
+          </div>
+        </div>
+
+        <!-- THANH ĐIỀU KHIỂN & BỘ LỌC -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🔔 Quản lý Lịch sử Thông báo & Nhắc việc Tự động (Zalo Bot / Gmail)</div>
+              <small style="color:var(--slate-500);">Theo dõi trạng thái gửi thực tế, mã phản hồi API và chống gửi trùng lặp</small>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-outline btn-sm" id="btn-mark-all-read">✓ Đánh dấu tất cả đã đọc</button>
+              <button class="btn btn-primary btn-sm" id="btn-scan-deadlines-now">⚡ Quét Nhắc hạn & Quá hạn ngay</button>
+              <button class="btn btn-outline btn-sm" id="btn-retry-all-failed">🔄 Thử gửi lại các tin lỗi</button>
+            </div>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: end;">
+            <div class="form-group" style="margin-bottom:0;" id="box-scope-filter">
+              <label class="form-label">Phạm vi xem</label>
+              <select id="ntf-flt-scope" class="form-control">
+                <option value="MINE">Thông báo của cá nhân tôi</option>
+                <option value="ALL">Toàn bộ hệ thống (SUPER ADMIN)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Kênh gửi</label>
+              <select id="ntf-flt-channel" class="form-control">
+                <option value="ALL">Tất cả kênh gửi</option>
+                <option value="ZALO_BOT">Zalo Bot trực tiếp</option>
+                <option value="FALLBACK_EMAIL">Gmail dự phòng</option>
+                <option value="GMAIL">Gmail trực tiếp</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Trạng thái gửi</label>
+              <select id="ntf-flt-status" class="form-control">
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="SENT">Đã gửi thành công (SENT)</option>
+                <option value="FALLBACK_SENT">Đã gửi dự phòng (FALLBACK)</option>
+                <option value="FAILED">Gửi thất bại (FAILED)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Loại thông báo</label>
+              <select id="ntf-flt-type" class="form-control">
+                <option value="ALL">Tất cả loại thông báo</option>
+                <option value="TASK_NEW">Nhiệm vụ mới</option>
+                <option value="REMIND_DEADLINE">Nhắc việc sắp đến hạn</option>
+                <option value="TASK_OVERDUE">Cảnh báo quá hạn</option>
+                <option value="REMIND_REPORT">Báo cáo tiến độ mới</option>
+                <option value="REPORT_APPROVED">Xác nhận hoàn thành</option>
+                <option value="REPORT_REJECTED">Yêu cầu bổ sung / Làm lại</option>
+                <option value="NEW_COMMENT">Trao đổi mới</option>
+                <option value="TEST_BOT">Tin nhắn kiểm thử Bot</option>
+              </select>
+            </div>
+            <div>
+              <button class="btn btn-primary" id="btn-filter-ntf" style="width:100%;">🔍 Lọc Thông báo</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BẢNG LỊCH SỬ THÔNG BÁO -->
+        <div class="card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mã TB / Thời gian</th>
+                  <th>Phân loại & Nhiệm vụ</th>
+                  <th>Người nhận / Đích nhận</th>
+                  <th>Nội dung tin nhắn</th>
+                  <th>Kênh gửi</th>
+                  <th>Trạng thái & Phản hồi</th>
+                  <th>Thử lại</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-notifications"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/notifications.js"></script>
+  <script>
+    window.markSingleRead = async function(notificationId) {
+      await ApiClient.call('notifications.markRead', { notificationId: notificationId, markAll: false });
+      NotificationsController.loadNotifications();
+    };
+
+    window.retrySingleNotif = async function(notificationId) {
+      const res = await ApiClient.call('notifications.retryFailed', { notificationId: notificationId });
+      App.toast(res.message, res.success ? 'success' : 'error');
+      NotificationsController.loadNotifications();
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await App.initProtectedPage('notifications', 'Trung tâm Thông báo & Lịch sử Zalo Bot');
+      if (!user) return;
+
+      if (user.Role === 'SUPER_ADMIN') {
+        document.getElementById('ntf-flt-scope').value = 'ALL';
+      } else {
+        document.getElementById('box-scope-filter').style.display = 'none';
+      }
+
+      await NotificationsController.loadNotifications();
+
+      document.getElementById('btn-filter-ntf').addEventListener('click', () => {
+        NotificationsController.loadNotifications();
+      });
+
+      document.getElementById('btn-mark-all-read').addEventListener('click', async () => {
+        const res = await ApiClient.call('notifications.markRead', { markAll: true });
+        App.toast(res.message);
+        NotificationsController.loadNotifications();
+      });
+
+      document.getElementById('btn-scan-deadlines-now').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-scan-deadlines-now');
+        btn.disabled = true;
+        btn.textContent = 'Đang quét nhiệm vụ & gửi Zalo...';
+        try {
+          const res = await ApiClient.call('notifications.scanNow', {});
+          App.toast(res.message, res.success ? 'success' : 'error');
+          await NotificationsController.loadNotifications();
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '⚡ Quét Nhắc hạn & Quá hạn ngay';
+        }
+      });
+
+      document.getElementById('btn-retry-all-failed').addEventListener('click', async () => {
+        const res = await ApiClient.call('notifications.retryFailed', {});
+        App.toast(res.message, res.success ? 'success' : 'error');
+        NotificationsController.loadNotifications();
+      });
+    });
+  </script>
+</body>
+</html>

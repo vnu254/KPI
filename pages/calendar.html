@@ -4,153 +4,187 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lịch Công việc & Đồng bộ Google Calendar</title>
-  <link rel="stylesheet" href="../assets/css/styles.css">
-  <!-- Thư viện FullCalendar v6 -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/locales/vi.global.min.js"></script>
-  <style>
-    .calendar-kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    .calendar-toolbar-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .legend-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      font-size: 13px;
-      font-weight: 500;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-    #fullcalendar-container {
-      background: #ffffff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      min-height: 650px;
-    }
-    .fc-event {
-      cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-  </style>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <!-- Thư viện FullCalendar v6 qua CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 </head>
 <body>
   <div class="app-layout">
-    <aside class="app-sidebar" id="app-sidebar"></aside>
-    <div class="app-main">
-      <header class="app-topbar" id="app-topbar"></header>
-      <main class="app-content">
-        <!-- Thống kê nhanh trên Lịch -->
-        <div class="calendar-kpi-grid">
-          <div class="card kpi-card">
-            <div class="kpi-label">Tổng nhiệm vụ trên lịch</div>
-            <div class="kpi-value" id="cal-kpi-total">0</div>
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main-wrapper">
+      <header class="topbar" id="app-topbar"></header>
+      <main class="content-container">
+
+        <!-- THANH CÔNG CỤ ĐỒNG BỘ GOOGLE CALENDAR & KIỂM THỬ GMAIL -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📅 Lịch Công việc Trực quan & Đồng bộ Google Calendar</div>
+              <small style="color:var(--slate-500);">
+                Chế độ: <strong>Đồng bộ một chiều chuẩn xác từ Web App sang Google Calendar</strong> (Giữ nguyên kỷ luật thời hạn nhiệm vụ)
+              </small>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <span id="gmail-quota-badge" class="user-pill" style="font-size:12px;">Hạn mức Gmail: --</span>
+              <button class="btn btn-outline btn-sm" id="btn-test-gmail">📧 Gửi Email Kiểm thử</button>
+              <button class="btn btn-primary btn-sm" id="btn-sync-all-calendar">🔄 Đồng bộ Tất cả lên Google Calendar</button>
+            </div>
           </div>
-          <div class="card kpi-card">
-            <div class="kpi-label">Đã hoàn thành</div>
-            <div class="kpi-value" style="color: #16a34a;" id="cal-kpi-completed">0</div>
+
+          <!-- BỘ LỌC LỊCH THEO PHẠM VI QUYỀN -->
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Phạm vi hiển thị lịch</label>
+              <select id="cal-flt-scope" class="form-control">
+                <option value="ALL">Tất cả lịch công việc được phân quyền</option>
+                <option value="PERSONAL">Lịch công việc cá nhân của tôi</option>
+                <option value="MY_ASSIGNED">Lịch nhiệm vụ tôi được giao thực hiện</option>
+                <option value="GROUP">Lịch nhiệm vụ nhóm / Phối hợp</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Bộ phận / Đơn vị</label>
+              <select id="cal-flt-group" class="form-control">
+                <option value="ALL">Tất cả đơn vị / bộ phận</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Trạng thái nhiệm vụ</label>
+              <select id="cal-flt-status" class="form-control">
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="PENDING">Chưa tiếp nhận</option>
+                <option value="IN_PROGRESS">Đang thực hiện</option>
+                <option value="WAITING_CONFIRM">Chờ xác nhận</option>
+                <option value="COMPLETED">Đã hoàn thành</option>
+                <option value="OVERDUE">Quá hạn</option>
+              </select>
+            </div>
+            <div>
+              <button class="btn btn-primary" id="btn-cal-filter" style="width:100%;">🔍 Áp dụng Bộ lọc Lịch</button>
+            </div>
           </div>
-          <div class="card kpi-card">
-            <div class="kpi-label">Đang quá hạn</div>
-            <div class="kpi-value" style="color: #dc2626;" id="cal-kpi-overdue">0</div>
-          </div>
-          <div class="card kpi-card">
-            <div class="kpi-label">Đã đồng bộ Google Calendar</div>
-            <div class="kpi-value" style="color: #2563eb;" id="cal-kpi-synced">0</div>
+
+          <!-- CHÚ THÍCH MÀU SẮC TRÊN LỊCH -->
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--slate-100);font-size:12px;">
+            <span><strong style="color:#0f766e;">■</strong> Công việc cá nhân</span>
+            <span><strong style="color:#1d4ed8;">■</strong> Nhiệm vụ được giao</span>
+            <span><strong style="color:#6d28d9;">■</strong> Nhiệm vụ nhóm</span>
+            <span><strong style="color:#0369a1;">■</strong> Nhiệm vụ định kỳ</span>
+            <span><strong style="color:#15803d;">■</strong> Đã hoàn thành</span>
+            <span><strong style="color:#b91c1c;">■</strong> Quá hạn</span>
           </div>
         </div>
 
-        <!-- Bộ lọc & Nút đồng bộ Google Calendar -->
-        <div class="calendar-toolbar-card">
-          <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-            <select id="filter-cal-status" class="form-control" style="width: auto;">
-              <option value="">-- Tất cả trạng thái --</option>
-              <option value="NEW">Mới giao</option>
-              <option value="IN_PROGRESS">Đang thực hiện</option>
-              <option value="WAITING_REVIEW">Chờ duyệt</option>
-              <option value="COMPLETED">Đã hoàn thành</option>
-            </select>
-            <select id="filter-cal-priority" class="form-control" style="width: auto;">
-              <option value="">-- Tất cả mức độ --</option>
-              <option value="URGENT">Khẩn cấp</option>
-              <option value="HIGH">Ưu tiên cao</option>
-              <option value="MEDIUM">Trung bình</option>
-              <option value="LOW">Thấp</option>
-            </select>
-            <button class="btn btn-outline" id="btn-cal-refresh">🔄 Làm mới lịch</button>
-          </div>
+        <!-- KHUNG HIỂN THỊ LỊCH FULLCALENDAR -->
+        <div class="card">
+          <div id="fullcalendar-box"></div>
+        </div>
 
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <button class="btn btn-primary" id="btn-sync-all-calendar">
-              ☁️ Đồng bộ tất cả lên Google Calendar
-            </button>
+        <!-- BẢNG LỊCH SỬ ĐỒNG BỘ GOOGLE CALENDAR (CALENDAR_EVENTS) -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🕒 Nhật ký Đồng bộ Sự kiện Google Calendar (CALENDAR_EVENTS)</div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mã Đồng bộ</th>
+                  <th>Mã Nhiệm vụ</th>
+                  <th>Tiêu đề Sự kiện trên Google Calendar</th>
+                  <th>Thời gian Sự kiện</th>
+                  <th>Trạng thái Đồng bộ</th>
+                  <th>Lần đồng bộ gần nhất</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-calendar-logs"></tbody>
+            </table>
           </div>
         </div>
 
-        <!-- Chú thích màu sắc -->
-        <div class="calendar-toolbar-card" style="padding: 12px 16px;">
-          <div class="legend-list">
-            <span class="legend-item"><span class="legend-dot" style="background:#2563eb;"></span> Đang thực hiện</span>
-            <span class="legend-item"><span class="legend-dot" style="background:#ea580c;"></span> Khẩn cấp / Cao</span>
-            <span class="legend-item"><span class="legend-dot" style="background:#7c3aed;"></span> Chờ xét duyệt</span>
-            <span class="legend-item"><span class="legend-dot" style="background:#dc2626;"></span> Quá hạn</span>
-            <span class="legend-item"><span class="legend-dot" style="background:#16a34a;"></span> Đã hoàn thành</span>
-            <span class="legend-item"><span class="legend-dot" style="background:#eab308;"></span> Ngày nghỉ lễ</span>
-          </div>
-        </div>
-
-        <!-- Bảng Lịch FullCalendar -->
-        <div id="fullcalendar-container"></div>
       </main>
     </div>
   </div>
 
-  <!-- Modal Xem Chi Tiết Sự Kiện & Nhắc Việc Qua Email -->
-  <div class="modal-backdrop" id="event-detail-modal" style="display: none;">
-    <div class="modal-box" style="max-width: 550px;">
-      <div class="modal-header">
-        <h3 id="modal-event-title">Chi tiết nhiệm vụ trên lịch</h3>
-        <button class="btn btn-outline btn-sm" id="btn-close-event-modal">✕</button>
+  <!-- MODAL XEM NHANH SỰ KIỆN TRÊN LỊCH & ĐỒNG BỘ TỨC THÌ -->
+  <div class="modal-backdrop" id="modal-cal-event">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title" id="ev-modal-title">Chi tiết Sự kiện Công việc</div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-cal-event').classList.remove('open')">✕</button>
       </div>
-      <div class="modal-body" id="modal-event-body" style="line-height: 1.7;"></div>
-      <div class="modal-footer" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-outline btn-sm" id="btn-sync-single-event">☁️ Đồng bộ Google Calendar</button>
-          <button class="btn btn-outline btn-sm" id="btn-send-email-reminder">📧 Gửi Email nhắc việc</button>
+      <div id="ev-modal-body"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" id="btn-ev-sync-single">🔄 Đồng bộ lại Google Calendar</button>
+          <button class="btn btn-outline btn-sm" id="btn-ev-send-mail">📧 Gửi Email Nhắc việc</button>
         </div>
-        <a href="./tasks.html" class="btn btn-primary btn-sm" id="btn-goto-task">Mở trang Công việc →</a>
+        <a href="#" id="btn-ev-goto-detail" class="btn btn-primary btn-sm">Mở Chi tiết & Báo cáo →</a>
       </div>
     </div>
   </div>
 
   <script src="../assets/js/api.js"></script>
   <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/tasks.js"></script>
   <script src="../assets/js/calendar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await App.initProtectedPage('calendar', 'Lịch Công việc & Đồng bộ Google Calendar');
+      if (!user) return;
+
+      await CalendarController.init();
+
+      document.getElementById('btn-cal-filter').addEventListener('click', () => {
+        CalendarController.refreshEvents();
+      });
+
+      document.getElementById('btn-sync-all-calendar').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-sync-all-calendar');
+        btn.disabled = true;
+        btn.textContent = 'Đang đồng bộ lên Google Calendar...';
+        try {
+          const res = await ApiClient.call('calendar.syncAll', { limit: 40 });
+          App.toast(res.message, res.success ? 'success' : 'error');
+          if (res.success) await CalendarController.refreshEvents();
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '🔄 Đồng bộ Tất cả lên Google Calendar';
+        }
+      });
+
+      document.getElementById('btn-test-gmail').addEventListener('click', async () => {
+        const email = prompt('Nhập địa chỉ Email nhận bản tin kiểm thử:', user.Email);
+        if (!email) return;
+        const res = await ApiClient.call('gmail.sendTest', { email: email.trim() });
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) CalendarController.loadGmailQuota();
+      });
+
+      document.getElementById('btn-ev-sync-single').addEventListener('click', async () => {
+        if (!selectedEventTaskId) return;
+        const res = await ApiClient.call('calendar.syncTask', { taskId: selectedEventTaskId });
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) {
+          document.getElementById('modal-cal-event').classList.remove('open');
+          await CalendarController.refreshEvents();
+        }
+      });
+
+      document.getElementById('btn-ev-send-mail').addEventListener('click', async () => {
+        if (!selectedEventTaskId) return;
+        const customNote = prompt('Nhập lời nhắc gửi qua Gmail cho người thực hiện:', 'Đề nghị đồng chí bám sát tiến độ và hoàn thành nhiệm vụ đúng hạn.');
+        if (customNote === null) return;
+        const res = await ApiClient.call('gmail.sendTaskReminder', {
+          taskId: selectedEventTaskId,
+          customNote: customNote
+        });
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) CalendarController.loadGmailQuota();
+      });
+    });
+  </script>
 </body>
 </html>

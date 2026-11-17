@@ -1,194 +1,142 @@
 /**
  * TỆP: assets/js/settings.js
- * CHỨC NĂNG: Điều khiển trang Cấu hình Hệ thống, Quản trị Zalo Bot, Trigger nhắc hạn và Nhật ký Notifications (Giai đoạn 7).
+ * CHỨC NĂNG: Quản trị Cài đặt hệ thống (SETTINGS), Cấu hình bảo mật Zalo Bot (Script Properties),
+ *            Quản lý Triggers tự động, Sao lưu CSDL sang Google Drive và Tra cứu Nhật ký (AUDIT_LOG).
  */
 
-const SettingsPage = {
+const SettingsController = {
+  ALL_REMIND_PRESETS: [
+    { mins: 15,   label: '15 phút trước hạn' },
+    { mins: 30,   label: '30 phút trước hạn' },
+    { mins: 60,   label: '1 giờ trước hạn' },
+    { mins: 120,  label: '2 giờ trước hạn' },
+    { mins: 180,  label: '3 giờ trước hạn' },
+    { mins: 360,  label: '6 giờ trước hạn' },
+    { mins: 720,  label: '12 giờ trước hạn' },
+    { mins: 1440, label: '1 ngày (24 giờ) trước hạn' },
+    { mins: 2880, label: '2 ngày (48 giờ) trước hạn' }
+  ],
+
+  ALL_NOTIFY_TYPES: [
+    { code: 'TASK_NEW',         label: 'Khi có nhiệm vụ mới được giao' },
+    { code: 'TASK_GROUP_NEW',   label: 'Khi có nhiệm vụ nhóm mới' },
+    { code: 'TASK_UPDATED',     label: 'Khi nhiệm vụ được chỉnh sửa' },
+    { code: 'TASK_EXTENDED',    label: 'Khi nhiệm vụ được gia hạn' },
+    { code: 'TASK_CANCELLED',   label: 'Khi nhiệm vụ bị hủy' },
+    { code: 'REMIND_DEADLINE',  label: 'Khi sắp đến thời hạn hoàn thành (Nhắc việc)' },
+    { code: 'TASK_OVERDUE',     label: 'Khi nhiệm vụ đã quá hạn (Cảnh báo quá hạn)' },
+    { code: 'REQUEST_PROGRESS', label: 'Khi người quản lý yêu cầu cập nhật tiến độ' },
+    { code: 'REMIND_REPORT',    label: 'Khi cán bộ gửi báo cáo tiến độ mới' },
+    { code: 'REPORT_APPROVED',  label: 'Khi báo cáo được xác nhận hoàn thành' },
+    { code: 'REPORT_REJECTED',  label: 'Khi báo cáo bị yêu cầu bổ sung / làm lại' },
+    { code: 'NEW_COMMENT',      label: 'Khi có nội dung trao đổi / bình luận mới' }
+  ],
+
   async init() {
-    const user = await App.initProtectedPage('settings', 'Cấu hình Hệ thống & Quản trị Zalo Bot');
-    if (!user) return;
+    this.renderRemindPresetCheckboxes();
+    this.renderNotifyTypesCheckboxes();
+    await this.loadAllSettings();
+  },
 
-    if (user.Role !== 'SUPER_ADMIN') {
-      App.toast('Chỉ Quản trị viên tối cao (SUPER_ADMIN) mới có quyền truy cập trang này.', 'error');
-      setTimeout(() => { window.location.href = '../dashboard.html'; }, 1500);
+  renderRemindPresetCheckboxes() {
+    const box = document.getElementById('box-remind-presets');
+    if (!box) return;
+    box.innerHTML = this.ALL_REMIND_PRESETS.map(p => `
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--slate-100);border-radius:6px;cursor:pointer;">
+        <input type="checkbox" class="chk-remind-preset" value="${p.mins}">
+        <span>${App.escapeHtml(p.label)}</span>
+      </label>
+    `).join('');
+  },
+
+  renderNotifyTypesCheckboxes() {
+    const box = document.getElementById('box-notify-types');
+    if (!box) return;
+    box.innerHTML = this.ALL_NOTIFY_TYPES.map(t => `
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--slate-100);border-radius:6px;cursor:pointer;">
+        <input type="checkbox" class="chk-notify-type" value="${t.code}" checked>
+        <span>${App.escapeHtml(t.label)}</span>
+      </label>
+    `).join('');
+  },
+
+  async loadAllSettings() {
+    const res = await ApiClient.call('settings.get');
+    if (!res.success) {
+      App.toast(res.message, 'error');
       return;
     }
 
-    this.bindEvents();
-    await this.loadOverview();
+    const s = res.data.settings || {};
+    const sec = res.data.secretsSummary || {};
+    const trig = res.data.triggersStatus || {};
+    const quota = res.data.gmailQuota || {};
+
+    // Điền Tab 1: Cài đặt chung & Nhắc việc
+    document.getElementById('set-unit-name').value = s['UNIT_NAME'] || 'ĐƠN VỊ QUẢN LÝ CÔNG VIỆC NỘI BỘ';
+    document.getElementById('set-session-hours').value = s['SESSION_TIMEOUT_HOURS'] || '24';
+    document.getElementById('set-enable-zalo').checked = String(s['ENABLE_ZALO_BOT']).toLowerCase() !== 'false';
+    document.getElementById('set-enable-fallback').checked = String(s['ENABLE_EMAIL_FALLBACK']).toLowerCase() !== 'false';
+    document.getElementById('set-enable-calendar').checked = String(s['ENABLE_CALENDAR_SYNC']).toLowerCase() !== 'false';
+
+    let savedMins = [];
+    try { savedMins = JSON.parse(s['DEFAULT_REMIND_MINS'] || '[1440, 180, 60, 30]'); } catch (e) { savedMins = [1440, 180, 60, 30]; }
+    const presetValues = this.ALL_REMIND_PRESETS.map(p => p.mins);
+    const customMins = savedMins.filter(m => !presetValues.includes(Number(m)));
+
+    document.querySelectorAll('.chk-remind-preset').forEach(chk => {
+      chk.checked = savedMins.map(Number).includes(Number(chk.value));
+    });
+    document.getElementById('set-custom-remind').value = customMins.join(', ');
+
+    let disabledTypes = [];
+    try { disabledTypes = JSON.parse(s['DISABLED_NOTIFY_TYPES'] || '[]'); } catch (e) { disabledTypes = []; }
+    document.querySelectorAll('.chk-notify-type').forEach(chk => {
+      chk.checked = !disabledTypes.includes(chk.value);
+    });
+
+    // Điền Tab 2: Cấu hình Zalo Bot (Script Properties)
+    document.getElementById('sec-zalo-url').value = sec.ZALO_BOT_API_URL || 'https://bot-api.zapps.me';
+    document.getElementById('sec-zalo-token-masked').textContent = sec.ZALO_BOT_TOKEN_MASKED || '(Chưa cấu hình)';
+    document.getElementById('sec-spreadsheet-id').textContent = sec.SPREADSHEET_ID || '';
+
+    // Điền Tab 3: Calendar, Gmail & Triggers
+    document.getElementById('sec-trigger-15m').innerHTML = trig.has15MinScanner
+      ? '<span class="status-badge status-ACTIVE">✅ Đang chạy (15 phút/lần)</span>'
+      : '<span class="status-badge status-LOCKED">⚠️ Chưa kích hoạt</span>';
+    document.getElementById('sec-trigger-daily').innerHTML = trig.hasDailyMaintenance
+      ? '<span class="status-badge status-ACTIVE">✅ Đang chạy (00:15 hằng ngày)</span>'
+      : '<span class="status-badge status-LOCKED">⚠️ Chưa kích hoạt</span>';
+    document.getElementById('sec-gmail-quota').textContent = `${quota.remainingQuota !== undefined ? quota.remainingQuota : '--'} email còn lại trong ngày`;
   },
 
-  bindEvents() {
-    document.getElementById('form-system-settings').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await this.saveSettings();
-    });
-
-    document.getElementById('btn-refresh-settings').addEventListener('click', () => this.loadOverview());
-
-    document.getElementById('btn-test-admin-zalo').addEventListener('click', async () => {
-      const chatId = document.getElementById('cfg-admin-chatid').value.trim();
-      try {
-        const res = await ApiClient.call('zalo.testDirectSend', {
-          chatId: chatId,
-          message: '🔔 Tin nhắn kiểm thử từ Trang Cấu hình Hệ thống (Giai đoạn 7).'
-        });
-        App.toast(res.message, res.success ? 'success' : 'error');
-        await this.loadOverview();
-      } catch (err) {
-        App.toast(err.message, 'error');
-      }
-    });
-
-    document.getElementById('btn-run-reminder-now').addEventListener('click', async () => {
-      try {
-        App.toast('Đang quét công việc sắp đến hạn & quá hạn...', 'info');
-        const res = await ApiClient.call('settings.runReminderScan', {});
-        if (res.success) {
-          App.toast(res.message, 'success');
-          await this.loadOverview();
-        }
-      } catch (err) {
-        App.toast(err.message, 'error');
-      }
-    });
-
-    document.getElementById('btn-install-triggers').addEventListener('click', async () => {
-      try {
-        const res = await ApiClient.call('settings.installAutomationTriggers', {});
-        if (res.success) {
-          App.toast(res.message, 'success');
-          this.renderOverviewData(res.data);
-        }
-      } catch (err) {
-        App.toast(err.message, 'error');
-      }
-    });
-
-    document.getElementById('btn-verify-db').addEventListener('click', async () => {
-      try {
-        const res = await ApiClient.call('system.verifyDatabase', {});
-        if (res.success) {
-          App.toast(res.message, 'success');
-        }
-      } catch (err) {
-        App.toast(err.message, 'error');
-      }
-    });
-  },
-
-  async loadOverview() {
-    try {
-      const res = await ApiClient.call('settings.getOverview', {});
-      if (res.success && res.data) {
-        this.renderOverviewData(res.data);
-      }
-    } catch (err) {
-      App.toast('Lỗi tải cấu hình: ' + err.message, 'error');
-    }
-  },
-
-  renderOverviewData(data) {
-    const cfg = data.botConfig || {};
-    const st = data.stats || {};
-
-    // KPI Cards
-    document.getElementById('stat-zalo-sent').textContent = st.sentNotifications || 0;
-    document.getElementById('stat-zalo-total').textContent = `Tổng: ${st.totalNotifications || 0} bản ghi`;
-    document.getElementById('stat-zalo-failed').textContent = st.failedNotifications || 0;
-    document.getElementById('stat-linked-users').textContent = `${st.linkedUsersCount || 0} / ${st.totalUsersCount || 0}`;
-    document.getElementById('stat-synced-cal').textContent = `${st.syncedCalendarTasksCount || 0} / ${st.totalTasksCount || 0}`;
-    document.getElementById('stat-email-quota').textContent = `Quota Email còn lại: ${st.remainingEmailQuota ?? '--'}/ngày`;
-
-    // Form inputs
-    document.getElementById('lbl-masked-token').textContent = cfg.hasToken ? cfg.maskedToken : 'Chưa cài đặt';
-    document.getElementById('cfg-bot-token').value = '';
-    document.getElementById('cfg-api-url').value = cfg.apiUrl || 'https://bot-api.zapps.me/bot';
-    document.getElementById('cfg-admin-chatid').value = cfg.adminChatId || '';
-    document.getElementById('cfg-calendar-id').value = cfg.unitCalendarId || 'primary';
-    document.getElementById('cfg-remind-hours').value = cfg.remindBeforeHours || 24;
-    document.getElementById('cfg-session-hours').value = cfg.sessionTimeoutHours || 24;
-    document.getElementById('cfg-auto-remind').checked = cfg.enableAutoRemind !== false;
-    document.getElementById('cfg-email-fallback').checked = cfg.enableEmailFallback !== false;
-
-    // Triggers
-    const trigUl = document.getElementById('trigger-list-ul');
-    const triggers = data.triggers || [];
-    if (triggers.length === 0) {
-      trigUl.innerHTML = `<li style="color:#dc2626;">Chưa có Trigger tự động nào được cài đặt.</li>`;
-    } else {
-      trigUl.innerHTML = triggers.map(t =>
-        `<li><strong>${App.escapeHtml(t.handlerFunction)}</strong> (${App.escapeHtml(t.eventType)})</li>`
-      ).join('');
+  async loadAuditLogs() {
+    const mod = document.getElementById('aud-flt-module').value;
+    const res = await ApiClient.call('audit.list', { module: mod, limit: 100 });
+    if (!res.success) {
+      App.toast(res.message, 'error');
+      return;
     }
 
-    // Notifications table
-    const tbody = document.getElementById('notif-log-tbody');
-    const logs = data.recentNotifications || [];
+    const logs = res.data.logs || [];
+    const tbody = document.getElementById('tbody-audit-logs');
     if (logs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="padding: 16px; text-align: center; color: #64748b;">Chưa có bản ghi thông báo nào.</td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#64748b;">Không có bản ghi nhật ký nào.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = logs.map(n => {
-      const status = String(n.Status || 'PENDING').toUpperCase();
-      const canRetry = status === 'FAILED' || status === 'ERROR';
-      return `
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 10px; white-space: nowrap;">${App.escapeHtml(n.Sent_At || n.Created_At || '')}</td>
-          <td style="padding: 10px;"><span class="badge">${App.escapeHtml(n.Notify_Type || '')}</span></td>
-          <td style="padding: 10px;">${App.escapeHtml(n.Recipient_User_ID || '')}</td>
-          <td style="padding: 10px; font-family: monospace;">${App.escapeHtml(n.Target_Zalo_Chat_ID || '')}</td>
-          <td style="padding: 10px; max-width: 280px;">
-            <div style="font-weight: 600;">${App.escapeHtml(n.Title || '')}</div>
-            ${n.Error_Message ? `<div style="color:#dc2626; font-size:11px;">Lỗi: ${App.escapeHtml(n.Error_Message)}</div>` : ''}
-          </td>
-          <td style="padding: 10px;">
-            <span class="status-pill status-${App.escapeHtml(status)}">${App.escapeHtml(status)}</span>
-          </td>
-          <td style="padding: 10px;">
-            ${canRetry ? `<button class="btn btn-outline btn-sm btn-retry-notif" data-id="${App.escapeHtml(n.Notification_ID)}">🔁 Gửi lại</button>` : '—'}
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    tbody.querySelectorAll('.btn-retry-notif').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const notifId = btn.getAttribute('data-id');
-        try {
-          const res = await ApiClient.call('settings.retryNotification', { notificationId: notifId });
-          App.toast(res.message, res.success ? 'success' : 'error');
-          await this.loadOverview();
-        } catch (err) {
-          App.toast(err.message, 'error');
-        }
-      });
-    });
-  },
-
-  async saveSettings() {
-    try {
-      const payload = {
-        botToken: document.getElementById('cfg-bot-token').value.trim(),
-        apiUrl: document.getElementById('cfg-api-url').value.trim(),
-        adminChatId: document.getElementById('cfg-admin-chatid').value.trim(),
-        unitCalendarId: document.getElementById('cfg-calendar-id').value.trim(),
-        remindBeforeHours: Number(document.getElementById('cfg-remind-hours').value || 24),
-        sessionTimeoutHours: Number(document.getElementById('cfg-session-hours').value || 24),
-        enableAutoRemind: document.getElementById('cfg-auto-remind').checked,
-        enableEmailFallback: document.getElementById('cfg-email-fallback').checked
-      };
-
-      const res = await ApiClient.call('settings.save', payload);
-      if (res.success) {
-        App.toast(res.message, 'success');
-        this.renderOverviewData(res.data);
-      }
-    } catch (err) {
-      App.toast(err.message, 'error');
-    }
+    tbody.innerHTML = logs.map(l => `
+      <tr>
+        <td><code>${App.escapeHtml(l.Audit_ID)}</code><br><small style="color:var(--slate-500);">${App.escapeHtml(l.Created_At)}</small></td>
+        <td><strong>${App.escapeHtml(l.Actor_Email || l.Actor_ID)}</strong><br><span class="role-badge role-${App.escapeHtml(l.Actor_Role)}">${App.escapeHtml(l.Actor_Role)}</span></td>
+        <td><strong>${App.escapeHtml(l.Module)}</strong></td>
+        <td><code style="color:var(--blue-600);font-weight:700;">${App.escapeHtml(l.Action)}</code></td>
+        <td>${App.escapeHtml(l.Target_ID)}</td>
+        <td><div style="font-size:12px;max-width:340px;word-break:break-all;">${App.escapeHtml(l.Detail_JSON)}</div></td>
+        <td><span class="status-badge status-${l.Result === 'SUCCESS' ? 'ACTIVE' : 'LOCKED'}">${App.escapeHtml(l.Result)}</span></td>
+      </tr>
+    `).join('');
   }
 };
 
-window.addEventListener('DOMContentLoaded', () => SettingsPage.init());
+window.SettingsController = SettingsController;

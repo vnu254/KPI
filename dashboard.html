@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bảng điều khiển - Quản lý Công việc</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main-wrapper">
+      <header class="topbar" id="app-topbar"></header>
+      <main class="content-container">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Tổng số Cán bộ / Tài khoản</div>
+            <div class="stat-value" id="stat-total-users">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Đang hoạt động</div>
+            <div class="stat-value" id="stat-active-users">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Đã liên kết Zalo Bot</div>
+            <div class="stat-value" id="stat-zalo-users">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Số Bộ phận / Đơn vị</div>
+            <div class="stat-value" id="stat-total-groups">--</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Trạng thái Nền tảng & Truy cập nhanh</div>
+          </div>
+          <p style="margin-bottom: 14px; color: var(--slate-700);">
+            Xin chào <strong id="welcome-name"></strong>! Bạn đang đăng nhập với quyền <span id="welcome-role" class="role-badge"></span>.
+          </p>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="./pages/profile.html" class="btn btn-primary">👤 Cấu hình Hồ sơ & Liên kết Zalo Bot</a>
+            <a href="./pages/users.html" id="btn-goto-users" class="btn btn-outline">👥 Quản lý Cán bộ, Phân quyền & Đơn vị</a>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="./assets/js/api.js"></script>
+  <script src="./assets/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await App.initProtectedPage('dashboard', 'Bảng điều khiển trung tâm');
+      if (!user) return;
+
+      document.getElementById('welcome-name').textContent = user.Full_Name;
+      const roleEl = document.getElementById('welcome-role');
+      roleEl.textContent = user.Role;
+      roleEl.className = 'role-badge role-' + user.Role;
+
+      if (user.Role === 'USER') {
+        document.getElementById('btn-goto-users').style.display = 'none';
+      }
+
+      const res = await ApiClient.call('users.list');
+      if (res.success) {
+        const users = res.data.users || [];
+        const groups = res.data.groups || [];
+        document.getElementById('stat-total-users').textContent = users.length;
+        document.getElementById('stat-active-users').textContent = users.filter(u => u.Status === 'ACTIVE').length;
+        document.getElementById('stat-zalo-users').textContent = users.filter(u => u.Zalo_Linked).length;
+        document.getElementById('stat-total-groups').textContent = groups.length;
+      }
+    });
+  </script>
+</body>
+</html>

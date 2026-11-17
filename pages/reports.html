@@ -271,12 +271,16 @@
       }
 
       if (taskRes.success) {
-        const tasks = (taskRes.data.tasks || []).filter(t => t.Status !== 'CANCELLED');
+        // CHỈ LẤY NHIỆM VỤ MÀ USER ĐANG ĐĂNG NHẬP LÀ NGƯỜI THỰC HIỆN VÀ CHƯA HOÀN THÀNH
+        const myTasks = (taskRes.data.tasks || []).filter(t => 
+          t.Is_Assignee === true && t.Status !== 'CANCELLED' && t.Status !== 'COMPLETED'
+        );
+        
         const sel = document.getElementById('sr-task-id');
-        if (tasks.length === 0) {
-          sel.innerHTML = '<option value="">-- Chưa có nhiệm vụ nào --</option>';
+        if (myTasks.length === 0) {
+          sel.innerHTML = '<option value="">-- Bạn không có nhiệm vụ nào cần báo cáo --</option>';
         } else {
-          sel.innerHTML = tasks.map(t =>
+          sel.innerHTML = myTasks.map(t =>
             `<option value="${App.escapeHtml(t.Task_ID)}">[${App.escapeHtml(t.Task_ID)}] ${App.escapeHtml(t.Title)} (Hiện tại: ${t.Progress}%)</option>`
           ).join('');
         }

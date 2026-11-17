@@ -53,9 +53,9 @@
             <div class="card">
               <div class="card-header">
                 <div class="card-title">📑 Báo cáo Tiến độ, Minh chứng & Kết quả Xét duyệt</div>
-                <button class="btn btn-primary btn-sm" onclick="document.getElementById('box-quick-report').style.display='block'">
-                  📤 + Gửi Báo cáo Kết quả Thực hiện
-                </button>
+    <button id="btn-show-quick-report" class="btn btn-primary btn-sm" style="display: none;" onclick="document.getElementById('box-quick-report').style.display='block'">
+      📤 + Gửi Báo cáo Kết quả Thực hiện
+    </button>
               </div>
 
               <!-- Biểu mẫu gửi báo cáo tại chỗ -->
@@ -241,7 +241,12 @@
         ${TaskUI.renderPriorityBadge(t.Priority)}
         ${TaskUI.renderStatusBadge(t.Status)}
       `;
-
+if (t.Is_Assignee && t.Status !== 'COMPLETED' && t.Status !== 'CANCELLED') {
+        document.getElementById('btn-show-quick-report').style.display = 'inline-block';
+      } else {
+        document.getElementById('btn-show-quick-report').style.display = 'none';
+        document.getElementById('box-quick-report').style.display = 'none';
+      }
       const attBox = document.getElementById('dt-attachments');
       attBox.innerHTML = (!t.Attachments || t.Attachments.length === 0)
         ? '<span style="color:#94a3b8;font-size:13px;">Chưa có tệp đính kèm.</span>'

@@ -4,7 +4,7 @@
  */
 
 // ===> BẠN DÁN LINK WEB APP (/exec) CỦA GOOGLE APPS SCRIPT VÀO DÒNG DƯỚI ĐÂY <===
-const DEFAULT_GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbzl_8trB1kzN1tuWgfDrWHwl9zgN4at47kocaV_PKoRoqiaTcHn7jdo7ScXqNZNHuUJ/exec';
+const DEFAULT_GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbxJLHIyNPL35xRc01PhwFwAv4dibwAb_T5BfOILPmi1OAyAKrbNRNaT-L2MyLSDxyHN/exec';
 
 const AppConfig = {
   GAS_WEB_APP_URL: localStorage.getItem('CUSTOM_GAS_URL') || DEFAULT_GAS_EXEC_URL,

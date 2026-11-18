@@ -179,3 +179,13 @@ const App = {
 };
 
 window.App = App;
+// TÍCH HỢP SERVICE WORKER (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Đăng ký sw.js từ thư mục gốc
+    const rootPath = window.location.pathname.includes('/pages/') ? '../sw.js' : './sw.js';
+    navigator.serviceWorker.register(rootPath).catch(err => {
+      console.log('Lỗi đăng ký PWA: ', err);
+    });
+  });
+}

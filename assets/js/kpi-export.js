@@ -1,7 +1,9 @@
 /**
  * TỆP: assets/js/kpi-export.js
- * CHỨC NĂNG: Xuất tệp Word (.doc) khổ A4 ngang và Excel (.xlsx) có công thức sống
- *            chuẩn theo 2 biểu mẫu Danh mục Công việc & Biểu KPI 16 cột.
+ * CHỨC NĂNG:
+ *  1. Xuất tệp Word (.doc) khổ A4 ngang và Excel (.xlsx) có công thức sống cho Mẫu 1 & Mẫu 2.
+ *  2. Tải tệp Excel mẫu nhập liệu chuẩn 10 cột Danh mục sản phẩm/công việc.
+ *  3. Đọc & phân tích tệp Excel (.xlsx/.xls) tải lên để tự động nạp danh sách nhiệm vụ vào KPI.
  */
 
 const KpiExporter = {
@@ -310,7 +312,7 @@ const KpiExporter = {
     }
   },
 
-  exportPlanExcel(data, selectedItems) {
+  exportPlanExcel(data, selectedItems, customFilename) {
     if (typeof XLSX === 'undefined') {
       alert('Chưa tải được thư viện xuất Excel. Vui lòng kiểm tra kết nối mạng.');
       return;
@@ -396,7 +398,38 @@ const KpiExporter = {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'DanhMucCongViec');
-    XLSX.writeFile(wb, `Danh_Muc_Cong_Viec_${this.safeFileSuffix(data)}.xlsx`);
+    XLSX.writeFile(wb, customFilename || `Danh_Muc_Cong_Viec_${this.safeFileSuffix(data)}.xlsx`);
+  },
+
+  /**
+   * TẢI FILE EXCEL MẪU NHẬP LIỆU CHUẨN 10 CỘT (Kèm 2 dòng ví dụ để điền nhanh rồi tải lên lại)
+   */
+  downloadPlanImportTemplate(data) {
+    const sampleItems = [
+      {
+        Title: 'Xây dựng kế hoạch công tác hậu cần - kỹ thuật tháng',
+        Submit_Level: 'Đảng ủy / Chỉ huy',
+        Complexity_Scope: 'Quan trọng, phạm vi toàn đơn vị',
+        Product_Name: 'Kế hoạch công tác tháng',
+        Plan_Quantity: 1,
+        Progress_Plan_Text: 'Trước ngày 05 hàng tháng',
+        Notes: 'Xóa dòng ví dụ này khi nhập thực tế',
+        Task_Base_Score: 10,
+        Conversion_Coeff: 1.5
+      },
+      {
+        Title: 'Kiểm tra công tác bảo đảm ăn uống và vệ sinh an toàn thực phẩm',
+        Submit_Level: 'Ban Hậu cần - Kỹ thuật',
+        Complexity_Scope: 'Thường xuyên, phạm vi các bếp ăn',
+        Product_Name: 'Biên bản kiểm tra tuần',
+        Plan_Quantity: 4,
+        Progress_Plan_Text: 'Hàng tuần',
+        Notes: '',
+        Task_Base_Score: 8,
+        Conversion_Coeff: 1
+      }
+    ];
+    this.exportPlanExcel(data, sampleItems, `Mau_Nhap_Danh_Muc_Cong_Viec_${this.safeFileSuffix(data)}.xlsx`);
   },
 
   exportKpiExcel(data, selectedItems, calc) {
@@ -413,7 +446,6 @@ const KpiExporter = {
     const fontBase = { name: 'Times New Roman', sz: 10 };
     const border = this._borderThin();
 
-    // 1. Tiêu đề
     this._setCell(ws, 0, 0, { t: 's', v: `ĐẢNG ỦY ${s.Party_Committee || '.....................'}`, s: { font: { ...fontBase, sz: 12 }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, 0, 7, { t: 's', v: 'ĐẢNG CỘNG SẢN VIỆT NAM', s: { font: { ...fontBase, sz: 12, bold: true, underline: true }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, 1, 0, { t: 's', v: `CHI BỘ ${s.Party_Cell || '...............'}`, s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
@@ -430,7 +462,6 @@ const KpiExporter = {
       { s: { r: 4, c: 1 }, e: { r: 4, c: 15 } }, { s: { r: 5, c: 1 }, e: { r: 5, c: 15 } }
     );
 
-    // 2. Đầu bảng 16 cột (Index 7 -> 10, tức Excel Row 8 -> 11)
     const thStyle = { font: { ...fontBase, bold: true }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border };
     const subStyle = { font: { ...fontBase, italic: true, sz: 9 }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border };
 
@@ -474,7 +505,6 @@ const KpiExporter = {
       { s: { r: 8, c: 13 }, e: { r: 8, c: 14 } }, { s: { r: 8, c: 15 }, e: { r: 9, c: 15 } }
     );
 
-    // 3. Dữ liệu nhiệm vụ (Index 11+, tức Excel Row 12+) với CÔNG THỨC SỐNG + GIÁ TRỊ SẴN
     const items = (selectedItems && selectedItems.length) ? selectedItems : [{}];
     const firstRowNum = 12;
     const tdCenter = { font: fontBase, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border };
@@ -514,7 +544,6 @@ const KpiExporter = {
     const boldCenter = { font: { ...fontBase, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border };
     const boldLeft = { font: { ...fontBase, bold: true }, alignment: { horizontal: 'left', vertical: 'center' }, border };
 
-    // 4. Hàng Tổng
     this._styleRange(ws, sumIdx, 0, sumIdx, 15, boldCenter);
     this._setCell(ws, sumIdx, 1, { t: 's', v: 'Tổng', s: boldLeft });
     const sumDefs = [
@@ -528,7 +557,6 @@ const KpiExporter = {
       this._setCell(ws, sumIdx, d.c, { t: 'n', f: `SUM(${d.ltr}${firstRowNum}:${d.ltr}${lastRowNum})`, v: d.v, z: '0.##', s: boldCenter });
     });
 
-    // 5. Hàng Tổng %
     this._styleRange(ws, pctIdx, 0, pctIdx, 15, boldCenter);
     this._setCell(ws, pctIdx, 1, { t: 's', v: 'Tổng %', s: boldLeft });
     [
@@ -540,7 +568,6 @@ const KpiExporter = {
       });
     });
 
-    // 6. Khối công thức tổng hợp A, B, C, D, KPI (%), Tiêu chí chung, Tổng điểm & Xếp loại
     const fStart = pctIdx + 2;
     const rA = fStart + 1, rB = fStart + 2, rC = fStart + 3, rD = fStart + 4;
     const rKpi = fStart + 5, rGen = fStart + 6;
@@ -593,5 +620,186 @@ const KpiExporter = {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'BieuKPI_CaNhan');
     XLSX.writeFile(wb, `Bieu_KPI_Ca_Nhan_${this.safeFileSuffix(data)}.xlsx`);
+  },
+
+  /* =========================================================================
+   * PHẦN 3: ĐỌC TỆP EXCEL MẪU DANH MỤC SẢN PHẨM/CÔNG VIỆC ĐỂ TỰ ĐỘNG THÊM NHIỆM VỤ
+   * ========================================================================= */
+  _normText(v) {
+    return String(v === undefined || v === null ? '' : v)
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+  },
+
+  _parseViNumber(val, fallback) {
+    if (val === undefined || val === null || val === '') return fallback;
+    if (typeof val === 'number') return isNaN(val) ? fallback : val;
+    const cleaned = String(val).trim().replace(/\s+/g, '').replace(',', '.');
+    const num = Number(cleaned);
+    return isNaN(num) ? fallback : num;
+  },
+
+  _formatCellTextOrDate(val) {
+    if (val === undefined || val === null || val === '') return '';
+    // Nếu ô Excel là số ngày serial (VD: 46345)
+    if (typeof val === 'number' && val > 35000 && val < 65000 && XLSX.SSF && XLSX.SSF.parse_date_code) {
+      const d = XLSX.SSF.parse_date_code(val);
+      if (d && d.y && d.m && d.d) {
+        return `${String(d.d).padStart(2, '0')}/${String(d.m).padStart(2, '0')}/${d.y}`;
+      }
+    }
+    return String(val).trim();
+  },
+
+  _extractIsoDateFromText(text, fallbackDate) {
+    if (!text) return fallbackDate;
+    const s = String(text).trim();
+    let m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return fallbackDate;
+  },
+
+  parsePlanExcelFile(file, defaultDates = {}) {
+    return new Promise((resolve, reject) => {
+      if (typeof XLSX === 'undefined') {
+        reject(new Error('Chưa tải được thư viện đọc Excel. Vui lòng kiểm tra kết nối mạng.'));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Không thể đọc tệp Excel đã chọn.'));
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const firstSheetName = wb.SheetNames[0];
+          const ws = wb.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+
+          if (!rows || rows.length === 0) {
+            reject(new Error('Tệp Excel trống, không có dữ liệu.'));
+            return;
+          }
+
+          // 1. Tự dò tìm hàng tiêu đề của bảng 10 cột
+          let headerRowIdx = -1;
+          const scanLimit = Math.min(rows.length, 25);
+          for (let r = 0; r < scanLimit; r++) {
+            const joined = rows[r].map(c => this._normText(c)).join(' | ');
+            const hasTaskCol = joined.includes('nhiệm vụ') || joined.includes('nhiem vu');
+            const hasOtherCol =
+              joined.includes('sản phẩm') || joined.includes('san pham') ||
+              joined.includes('cấp trình') || joined.includes('cap trinh') ||
+              joined.includes('hệ số') || joined.includes('he so') ||
+              joined.includes('số lượng') || joined.includes('so luong');
+
+            if (hasTaskCol && hasOtherCol) {
+              headerRowIdx = r;
+              break;
+            }
+          }
+
+          // 2. Xác định vị trí từng cột (Tự ánh xạ theo tên cột, dự phòng theo thứ tự chuẩn 10 cột)
+          const colMap = {
+            title: 1,
+            submitLevel: 2,
+            complexity: 3,
+            product: 4,
+            planQty: 5,
+            progressText: 6,
+            notes: 7,
+            baseScore: 8,
+            coeff: 9,
+            dueDate: -1
+          };
+
+          if (headerRowIdx !== -1) {
+            const headerCells = rows[headerRowIdx].map(c => this._normText(c));
+            headerCells.forEach((h, idx) => {
+              if (!h) return;
+              if (h.includes('nhiệm vụ') || h.includes('nhiem vu')) colMap.title = idx;
+              else if (h.includes('cấp trình') || h.includes('cap trinh')) colMap.submitLevel = idx;
+              else if (h.includes('độ khó') || h.includes('phức tạp') || h.includes('tác động') || h.includes('do kho')) colMap.complexity = idx;
+              else if (h.includes('sản phẩm') || h.includes('san pham')) colMap.product = idx;
+              else if ((h.includes('số lượng') || h.includes('so luong')) && !h.includes('quy đổi') && !h.includes('quy doi')) colMap.planQty = idx;
+              else if (h.includes('tiến độ') || h.includes('tien do')) colMap.progressText = idx;
+              else if (h.includes('ghi chú') || h.includes('ghi chu')) colMap.notes = idx;
+              else if (h.includes('điểm chấm') || h.includes('diem cham')) colMap.baseScore = idx;
+              else if (h.includes('hệ số') || h.includes('he so')) colMap.coeff = idx;
+              else if (h.includes('hạn hoàn thành') || h.includes('ngày đến hạn') || h.includes('han hoan thanh')) colMap.dueDate = idx;
+            });
+          }
+
+          // 3. Duyệt từng dòng dữ liệu nhiệm vụ
+          const startIdx = headerRowIdx !== -1 ? headerRowIdx + 1 : 0;
+          const stopKeywords = ['người lập', 'nguoi lap', 't/m cấp ủy', 'tm cấp ủy', 'bí thư', 'bi thu', 'tổng cộng', 'tong cong', 'tổng %'];
+          const parsedItems = [];
+
+          for (let r = startIdx; r < rows.length; r++) {
+            const row = rows[r] || [];
+            const rowJoined = row.map(c => this._normText(c)).join(' ');
+            if (!rowJoined) continue;
+
+            // Dừng đọc khi gặp khối chữ ký hoặc dòng tổng cuối bảng
+            if (stopKeywords.some(kw => rowJoined.includes(kw))) {
+              if (parsedItems.length > 0 || r > startIdx + 1) break;
+              continue;
+            }
+
+            const titleRaw = String(row[colMap.title] !== undefined ? row[colMap.title] : '').trim();
+            const titleNorm = this._normText(titleRaw);
+
+            // Bỏ qua dòng trống hoặc dòng đánh số cột (1), (2), (3)
+            if (!titleRaw || titleNorm === '(2)' || titleNorm === 'nhiệm vụ theo tháng' || titleNorm === 'nhiệm vụ') {
+              continue;
+            }
+
+            const progressText = this._formatCellTextOrDate(row[colMap.progressText]);
+            const rawDueCell = colMap.dueDate !== -1 ? this._formatCellTextOrDate(row[colMap.dueDate]) : '';
+            const detectedDue = this._extractIsoDateFromText(
+              rawDueCell || progressText,
+              defaultDates.toDate || ''
+            );
+
+            parsedItems.push({
+              Task_ID: '',
+              _isNew: true,
+              _selected: true,
+              Title: titleRaw,
+              Start_Date: defaultDates.fromDate || '',
+              Due_Date: detectedDue,
+              Submit_Level: String(row[colMap.submitLevel] !== undefined ? row[colMap.submitLevel] : '').trim(),
+              Complexity_Scope: String(row[colMap.complexity] !== undefined ? row[colMap.complexity] : '').trim(),
+              Product_Name: String(row[colMap.product] !== undefined ? row[colMap.product] : '').trim(),
+              Plan_Quantity: this._parseViNumber(row[colMap.planQty], 1),
+              Progress_Plan_Text: progressText,
+              Notes: String(row[colMap.notes] !== undefined ? row[colMap.notes] : '').trim(),
+              Task_Base_Score: this._parseViNumber(row[colMap.baseScore], 0),
+              Conversion_Coeff: Math.max(0.1, this._parseViNumber(row[colMap.coeff], 1)),
+              Kpi_Qty_Actual: '',
+              Kpi_Qual_Actual: '',
+              Kpi_Time_Actual: '',
+              Kpi_Lead_Actual: '',
+              Error_Count: 0,
+              Self_Evaluation_Note: '',
+              Can_Edit_Title: true
+            });
+          }
+
+          if (parsedItems.length === 0) {
+            reject(new Error('Không tìm thấy dòng nhiệm vụ hợp lệ nào trong tệp Excel. Hãy kiểm tra đúng cấu trúc cột mẫu.'));
+            return;
+          }
+
+          resolve({ items: parsedItems });
+        } catch (err) {
+          reject(new Error('Lỗi đọc tệp Excel: ' + err.message));
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
   }
 };

@@ -11,17 +11,24 @@
     .kpi-grid-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .kpi-grid-table th, .kpi-grid-table td { border: 1px solid #cbd5e1; padding: 5px 4px; vertical-align: middle; }
     .kpi-grid-table th { background: #0f2942; color: #fff; text-align: center; font-weight: 600; }
-    .kpi-grid-table input[type="text"], .kpi-grid-table input[type="number"] {
+    .kpi-grid-table input[type="text"], .kpi-grid-table input[type="number"], .kpi-grid-table input[type="date"] {
       width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 12px; font-family: inherit;
     }
     .kpi-num { width: 56px !important; text-align: center; }
     .kpi-calc { background: #f1f5f9; font-weight: 700; text-align: center; color: #0f2942; }
     .kpi-row-excluded { opacity: 0.45; background: #f8fafc; }
+    .kpi-row-new { background: #f0fdf4; }
+    .badge-new-row { display: inline-block; padding: 1px 6px; font-size: 10px; font-weight: 700; background: #16a34a; color: #fff; border-radius: 10px; margin-right: 4px; }
+    .btn-remove-draft { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+    .btn-remove-draft:hover { background: #fecaca; }
     .kpi-total-row td { background: #e2e8f0; font-weight: 700; text-align: center; color: #0f172a; }
     .kpi-pct-row td { background: #dbeafe; font-weight: 700; text-align: center; color: #1d4ed8; }
     .btn-deduct { display: inline-block; margin-top: 3px; padding: 1px 5px; font-size: 10px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer; }
     .btn-deduct:hover { background: #fecaca; }
     .tab-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+    .plan-action-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; justify-content: space-between; }
+    .import-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .auto-save-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #0f2942; font-weight: 600; cursor: pointer; background: #eff6ff; padding: 4px 8px; border-radius: 6px; border: 1px solid #bfdbfe; }
     .export-group { display: flex; gap: 6px; flex-wrap: wrap; }
     .summary-panel { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 14px; }
     .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; gap: 12px; }
@@ -40,7 +47,7 @@
           <div class="card-header">
             <div class="card-title">🏅 Triển khai Danh mục Công việc & Tính điểm KPI Cá nhân</div>
             <div class="export-group">
-              <button class="btn btn-primary btn-sm" id="btn-save-kpi" onclick="saveAllKpi()">💾 Lưu KPI</button>
+              <button class="btn btn-primary btn-sm" id="btn-save-kpi" onclick="saveAllKpi()">💾 Lưu Danh mục & KPI</button>
               <button class="btn btn-outline btn-sm" onclick="exportPlan('WORD')">📄 Word Mẫu 1</button>
               <button class="btn btn-outline btn-sm" onclick="exportPlan('EXCEL')">📊 Excel Mẫu 1</button>
               <button class="btn btn-success btn-sm" onclick="exportKpi('WORD')">📝 Word Mẫu 2 (KPI)</button>
@@ -48,7 +55,7 @@
             </div>
           </div>
 
-          <!-- Bộ lọc thời gian linh hoạt: Theo tháng HOẶC Từ ngày - Đến ngày -->
+          <!-- Bộ lọc thời gian: Theo tháng HOẶC Từ ngày - Đến ngày -->
           <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px;">
             <div class="form-group">
               <label>Kiểu chọn thời gian</label>
@@ -115,26 +122,43 @@
             <small style="color:#64748b;">💡 Bỏ tích ô vuông đầu dòng nếu muốn loại nhiệm vụ đó khỏi đợt đánh giá KPI & file xuất.</small>
           </div>
 
-          <!-- TAB 1: MẪU DANH MỤC CÔNG VIỆC -->
-          <div id="tab-plan" class="table-responsive">
-            <table class="kpi-grid-table">
-              <thead>
-                <tr>
-                  <th style="width:36px;"><input type="checkbox" id="chk-all-plan" checked onchange="toggleSelectAll(this.checked)"></th>
-                  <th>TT</th>
-                  <th style="min-width:180px;">Nhiệm vụ theo kỳ</th>
-                  <th style="min-width:110px;">Cấp trình</th>
-                  <th style="min-width:160px;">Độ khó, mới, phức tạp; phạm vi tác động</th>
-                  <th style="min-width:140px;">Sản phẩm</th>
-                  <th>Số lượng</th>
-                  <th style="min-width:110px;">Tiến độ</th>
-                  <th style="min-width:120px;">Ghi chú</th>
-                  <th>Điểm chấm CV</th>
-                  <th>Hệ số quy đổi</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-plan"></tbody>
-            </table>
+          <!-- TAB 1: MẪU DANH MỤC CÔNG VIỆC (KẾT HỢP NHẬP EXCEL TỰ ĐỘNG + NHẬP TAY TRỰC TIẾP) -->
+          <div id="tab-plan">
+            <div class="plan-action-bar">
+              <div class="import-box">
+                <button type="button" class="btn btn-primary btn-sm" onclick="addNewPlanRows(1)">➕ Thêm dòng nhiệm vụ</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="addNewPlanRows(5)">➕ Thêm nhanh 5 dòng</button>
+                <span style="color:#cbd5e1;">|</span>
+                <input type="file" id="in-import-plan-excel" accept=".xlsx,.xls" style="display:none;" onchange="handleImportPlanExcel(event)">
+                <button type="button" class="btn btn-success btn-sm" id="btn-import-excel" onclick="triggerImportExcel()">📤 Tải lên Excel Danh mục</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="downloadImportTemplateBtn()">📥 Tải Excel mẫu nhập</button>
+                <label class="auto-save-toggle" title="Bật để tự động lưu thẳng vào hệ thống ngay sau khi tải tệp Excel lên">
+                  <input type="checkbox" id="chk-auto-save-import" checked>
+                  Tự động lưu ngay khi tải Excel
+                </label>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="kpi-grid-table">
+                <thead>
+                  <tr>
+                    <th style="width:34px;"><input type="checkbox" id="chk-all-plan" checked onchange="toggleSelectAll(this.checked)"></th>
+                    <th style="width:38px;">TT</th>
+                    <th style="min-width:210px;">Nhiệm vụ theo kỳ & Hạn HT</th>
+                    <th style="min-width:110px;">Cấp trình</th>
+                    <th style="min-width:160px;">Độ khó, mới, phức tạp; phạm vi tác động</th>
+                    <th style="min-width:140px;">Sản phẩm</th>
+                    <th>Số lượng</th>
+                    <th style="min-width:115px;">Tiến độ</th>
+                    <th style="min-width:120px;">Ghi chú</th>
+                    <th>Điểm chấm CV</th>
+                    <th>Hệ số quy đổi</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-plan"></tbody>
+              </table>
+            </div>
           </div>
 
           <!-- TAB 2: MẪU KPI 16 CỘT -->
@@ -223,7 +247,7 @@
     </div>
   </div>
 
-  <!-- Thư viện xuất Excel hỗ trợ công thức sống + kẻ khung & Times New Roman -->
+  <!-- Thư viện đọc/xuất Excel hỗ trợ công thức sống + kẻ khung & Times New Roman -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="../assets/js/api.js"></script>
   <script src="../assets/js/app.js"></script>
@@ -271,6 +295,14 @@
       if (tab === 'KPI') renderKpiTable(); else renderPlanTable();
     }
 
+    function updatePeriodBadge() {
+      if (!currentData) return;
+      const total = (currentData.items || []).length;
+      const draftCount = (currentData.items || []).filter(x => !x.Task_ID).length;
+      const draftText = draftCount > 0 ? ` • ${draftCount} dòng mới chưa lưu` : '';
+      document.getElementById('lbl-period-badge').textContent = `Kỳ đánh giá: ${currentData.periodLabel} (${total} nhiệm vụ${draftText})`;
+    }
+
     async function loadMonthlyData() {
       const filterMode = document.getElementById('f-mode').value;
       const payload = {
@@ -285,10 +317,8 @@
       if (!res.success) return App.toast(res.message, 'error');
 
       currentData = res.data;
-      // Mặc định tích chọn tất cả các nhiệm vụ lọc được
       (currentData.items || []).forEach(it => { it._selected = true; });
-
-      document.getElementById('lbl-period-badge').textContent = `Kỳ đánh giá: ${currentData.periodLabel} (${currentData.items.length} nhiệm vụ)`;
+      updatePeriodBadge();
 
       const s = currentData.summary || {};
       document.getElementById('h-party-committee').value = s.Party_Committee || '';
@@ -302,13 +332,146 @@
       renderKpiTable();
     }
 
+    /* =====================================================================
+     * CHỨC NĂNG 1: TẢI LÊN FILE EXCEL DANH MỤC SẢN PHẨM -> TỰ CẬP NHẬT THÊM
+     * ===================================================================== */
+    function triggerImportExcel() {
+      if (!currentData) {
+        App.toast('Vui lòng đợi dữ liệu kỳ đánh giá tải xong trước khi tải tệp Excel.', 'error');
+        return;
+      }
+      document.getElementById('in-import-plan-excel').click();
+    }
+
+    function downloadImportTemplateBtn() {
+      if (!currentData) {
+        App.toast('Vui lòng đợi dữ liệu tải xong trước khi tải tệp mẫu.', 'error');
+        return;
+      }
+      syncHeaderInputs();
+      KpiExporter.downloadPlanImportTemplate(currentData);
+    }
+
+    async function handleImportPlanExcel(event) {
+      const input = event.target;
+      const file = input.files && input.files[0];
+      if (!file || !currentData) return;
+
+      const btn = document.getElementById('btn-import-excel');
+      btn.disabled = true;
+      btn.textContent = 'Đang đọc file Excel...';
+
+      try {
+        const result = await KpiExporter.parsePlanExcelFile(file, {
+          fromDate: currentData.fromDate,
+          toDate: currentData.toDate
+        });
+
+        // Lọc tránh trùng nhiệm vụ đã có sẵn trong kỳ (so sánh theo Tên nhiệm vụ + Sản phẩm)
+        const existingKeys = new Set(
+          (currentData.items || []).map(it =>
+            `${String(it.Title || '').trim().toLowerCase()}||${String(it.Product_Name || '').trim().toLowerCase()}`
+          )
+        );
+
+        let addedCount = 0;
+        let skippedDupCount = 0;
+
+        result.items.forEach(newItem => {
+          const key = `${String(newItem.Title || '').trim().toLowerCase()}||${String(newItem.Product_Name || '').trim().toLowerCase()}`;
+          if (existingKeys.has(key)) {
+            skippedDupCount++;
+            return;
+          }
+          existingKeys.add(key);
+          currentData.items.push(newItem);
+          addedCount++;
+        });
+
+        if (addedCount === 0) {
+          App.toast(`Toàn bộ ${skippedDupCount} nhiệm vụ trong tệp Excel đã tồn tại trong kỳ này.`, 'error');
+          return;
+        }
+
+        updatePeriodBadge();
+        renderPlanTable();
+        renderKpiTable();
+
+        const dupMsg = skippedDupCount > 0 ? ` (bỏ qua ${skippedDupCount} dòng trùng)` : '';
+        const autoSave = document.getElementById('chk-auto-save-import').checked;
+
+        if (autoSave) {
+          App.toast(`Đã đọc ${addedCount} nhiệm vụ mới từ Excel${dupMsg}. Đang tự động lưu vào hệ thống...`, 'success');
+          await saveAllKpi();
+        } else {
+          App.toast(`Đã nạp ${addedCount} nhiệm vụ từ Excel${dupMsg}. Hãy kiểm tra lại rồi bấm [💾 Lưu Danh mục & KPI].`, 'success');
+        }
+      } catch (err) {
+        App.toast(err.message, 'error');
+      } finally {
+        input.value = '';
+        btn.disabled = false;
+        btn.textContent = '📤 Tải lên Excel Danh mục';
+      }
+    }
+
+    /* =====================================================================
+     * CHỨC NĂNG 2: THÊM DÒNG NHẬP TAY TRỰC TIẾP THEO MẪU DANH MỤC SẢN PHẨM
+     * ===================================================================== */
+    function addNewPlanRows(count = 1) {
+      if (!currentData) {
+        App.toast('Vui lòng đợi dữ liệu kỳ đánh giá tải xong trước khi thêm dòng.', 'error');
+        return;
+      }
+      const startIdx = currentData.items.length;
+      for (let k = 0; k < count; k++) {
+        currentData.items.push({
+          Task_ID: '',
+          _isNew: true,
+          _selected: true,
+          Title: '',
+          Start_Date: currentData.fromDate || '',
+          Due_Date: currentData.toDate || '',
+          Submit_Level: '',
+          Complexity_Scope: '',
+          Product_Name: '',
+          Plan_Quantity: 1,
+          Progress_Plan_Text: '',
+          Notes: '',
+          Task_Base_Score: 0,
+          Conversion_Coeff: 1,
+          Kpi_Qty_Actual: '',
+          Kpi_Qual_Actual: '',
+          Kpi_Time_Actual: '',
+          Kpi_Lead_Actual: '',
+          Error_Count: 0,
+          Self_Evaluation_Note: '',
+          Can_Edit_Title: true
+        });
+      }
+      updatePeriodBadge();
+      renderPlanTable();
+      renderKpiTable();
+
+      const firstInput = document.getElementById(`plan-title-${startIdx}`);
+      if (firstInput) firstInput.focus();
+    }
+
+    function removeDraftRow(idx) {
+      if (!currentData || !currentData.items[idx] || currentData.items[idx].Task_ID) return;
+      currentData.items.splice(idx, 1);
+      updatePeriodBadge();
+      renderPlanTable();
+      renderKpiTable();
+    }
+
     function fmtN(v) {
       const n = Number(v) || 0;
       return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
     }
 
     function getSelectedItems() {
-      return (currentData && currentData.items ? currentData.items : []).filter(it => it._selected !== false);
+      return (currentData && currentData.items ? currentData.items : []).filter(it => it._selected !== false && String(it.Title || '').trim() !== '');
     }
 
     function toggleSelectAll(checked) {
@@ -341,8 +504,8 @@
     function deductError(idx, field, label) {
       const it = currentData.items[idx];
       if (!it) return;
-      const cur = Number(it[field]) || 0;
-      it[field] = Math.max(0, Number((cur - 0.25).toFixed(2)));
+      const baseVal = (it[field] !== '' && it[field] !== undefined) ? Number(it[field]) : (Number(it.Plan_Quantity) || 0);
+      it[field] = Math.max(0, Number((baseVal - 0.25).toFixed(2)));
       it.Error_Count = (Number(it.Error_Count) || 0) + 1;
       const tag = `Trừ 0.25 (${label})`;
       it.Self_Evaluation_Note = it.Self_Evaluation_Note ? `${it.Self_Evaluation_Note}; ${tag}` : tag;
@@ -352,69 +515,97 @@
     function renderPlanTable() {
       const tbody = document.getElementById('tbody-plan');
       if (!currentData || !currentData.items.length) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:18px;">Không tìm thấy nhiệm vụ nào trong khoảng thời gian đã chọn.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:22px;color:#64748b;">Chưa có nhiệm vụ nào trong kỳ này. Bấm <strong>📤 Tải lên Excel Danh mục</strong> hoặc <strong>➕ Thêm dòng nhiệm vụ</strong> phía trên để nhập.</td></tr>';
         return;
       }
-      tbody.innerHTML = currentData.items.map((it, i) => `
-        <tr class="${it._selected === false ? 'kpi-row-excluded' : ''}">
-          <td style="text-align:center;"><input type="checkbox" ${it._selected !== false ? 'checked' : ''} onchange="toggleItemSelected(${i}, this.checked)"></td>
-          <td style="text-align:center;">${i + 1}</td>
-          <td><strong>${App.escapeHtml(it.Title)}</strong><br><small style="color:#64748b;">Hạn: ${App.escapeHtml(it.Due_Date || '—')}</small></td>
-          <td><input type="text" value="${App.escapeHtml(it.Submit_Level)}" oninput="updateItemField(${i},'Submit_Level',this.value)"></td>
-          <td><input type="text" value="${App.escapeHtml(it.Complexity_Scope)}" oninput="updateItemField(${i},'Complexity_Scope',this.value)"></td>
-          <td><input type="text" value="${App.escapeHtml(it.Product_Name)}" oninput="updateItemField(${i},'Product_Name',this.value)"></td>
-          <td><input type="number" step="0.25" class="kpi-num" value="${it.Plan_Quantity}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
-          <td><input type="text" value="${App.escapeHtml(it.Progress_Plan_Text)}" oninput="updateItemField(${i},'Progress_Plan_Text',this.value)"></td>
-          <td><input type="text" value="${App.escapeHtml(it.Notes)}" oninput="updateItemField(${i},'Notes',this.value)"></td>
-          <td><input type="number" step="0.5" class="kpi-num" value="${it.Task_Base_Score}" oninput="updateItemField(${i},'Task_Base_Score',this.value)"></td>
-          <td><input type="number" step="0.1" class="kpi-num" value="${it.Conversion_Coeff}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = currentData.items.map((it, i) => {
+        const isNew = !it.Task_ID;
+        const rowClass = it._selected === false ? 'kpi-row-excluded' : (isNew ? 'kpi-row-new' : '');
+
+        const titleCellHtml = (isNew || it.Can_Edit_Title)
+          ? `
+            <div style="display:flex; gap:4px; align-items:center;">
+              ${isNew ? '<span class="badge-new-row">Mới</span>' : ''}
+              <input id="plan-title-${i}" type="text" value="${App.escapeHtml(it.Title)}" placeholder="Nhập tên nhiệm vụ theo tháng..." oninput="updateItemField(${i},'Title',this.value)">
+              ${isNew ? `<button type="button" class="btn-remove-draft" title="Xóa dòng nháp" onclick="removeDraftRow(${i})">✕</button>` : ''}
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+              <small style="color:#64748b; white-space:nowrap;">${isNew ? 'Hạn HT:' : App.escapeHtml(it.Task_ID) + ' • Hạn:'}</small>
+              <input type="date" value="${App.escapeHtml(it.Due_Date || currentData.toDate || '')}" style="max-width:130px; padding:2px 4px; font-size:11px;" oninput="updateItemField(${i},'Due_Date',this.value)">
+            </div>
+          `
+          : `
+            <strong>${App.escapeHtml(it.Title)}</strong>
+            <br><small style="color:#64748b;">${App.escapeHtml(it.Task_ID)} • Hạn: ${App.escapeHtml(it.Due_Date || '—')}</small>
+          `;
+
+        return `
+          <tr class="${rowClass}">
+            <td style="text-align:center;"><input type="checkbox" ${it._selected !== false ? 'checked' : ''} onchange="toggleItemSelected(${i}, this.checked)"></td>
+            <td style="text-align:center;">${i + 1}</td>
+            <td>${titleCellHtml}</td>
+            <td><input type="text" value="${App.escapeHtml(it.Submit_Level)}" placeholder="VD: Đảng ủy..." oninput="updateItemField(${i},'Submit_Level',this.value)"></td>
+            <td><input type="text" value="${App.escapeHtml(it.Complexity_Scope)}" placeholder="Độ khó, phạm vi..." oninput="updateItemField(${i},'Complexity_Scope',this.value)"></td>
+            <td><input type="text" value="${App.escapeHtml(it.Product_Name)}" placeholder="Tên sản phẩm..." oninput="updateItemField(${i},'Product_Name',this.value)"></td>
+            <td><input type="number" step="0.25" min="0" class="kpi-num" value="${it.Plan_Quantity}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
+            <td><input type="text" value="${App.escapeHtml(it.Progress_Plan_Text)}" placeholder="VD: Trong tháng" oninput="updateItemField(${i},'Progress_Plan_Text',this.value)"></td>
+            <td><input type="text" value="${App.escapeHtml(it.Notes)}" placeholder="Ghi chú..." oninput="updateItemField(${i},'Notes',this.value)"></td>
+            <td><input type="number" step="0.5" min="0" class="kpi-num" value="${it.Task_Base_Score}" oninput="updateItemField(${i},'Task_Base_Score',this.value)"></td>
+            <td><input type="number" step="0.1" min="0.1" class="kpi-num" value="${it.Conversion_Coeff}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function renderKpiTable() {
       const tbody = document.getElementById('tbody-kpi');
       if (!currentData || !currentData.items.length) {
-        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:18px;">Không tìm thấy nhiệm vụ nào trong khoảng thời gian đã chọn.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:18px;color:#64748b;">Chưa có nhiệm vụ nào trong kỳ này. Chuyển sang Tab 1 để tải Excel hoặc nhập danh mục nhiệm vụ.</td></tr>';
         recalcTotals();
         return;
       }
       tbody.innerHTML = currentData.items.map((it, i) => {
         const c4 = Number(it.Plan_Quantity) || 0, c6 = Number(it.Conversion_Coeff) || 1;
+        const v8 = it.Kpi_Qty_Actual !== undefined ? it.Kpi_Qty_Actual : '';
+        const v10 = it.Kpi_Qual_Actual !== undefined ? it.Kpi_Qual_Actual : '';
+        const v12 = it.Kpi_Time_Actual !== undefined ? it.Kpi_Time_Actual : '';
+        const v14 = it.Kpi_Lead_Actual !== undefined ? it.Kpi_Lead_Actual : '';
+        const rowClass = it._selected === false ? 'kpi-row-excluded' : (!it.Task_ID ? 'kpi-row-new' : '');
+
         return `
-          <tr class="${it._selected === false ? 'kpi-row-excluded' : ''}">
+          <tr class="${rowClass}">
             <td style="text-align:center;"><input type="checkbox" ${it._selected !== false ? 'checked' : ''} onchange="toggleItemSelected(${i}, this.checked)"></td>
             <td style="text-align:center;">${i + 1}</td>
-            <td>${App.escapeHtml(it.Title)}</td>
+            <td>${!it.Task_ID ? '<span class="badge-new-row">Mới</span>' : ''}${App.escapeHtml(it.Title || '(Chưa nhập tên nhiệm vụ)')}</td>
             <td>${App.escapeHtml(it.Product_Name)}</td>
-            <td><input type="number" step="0.25" class="kpi-num" value="${c4}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
+            <td><input type="number" step="0.25" min="0" class="kpi-num" value="${c4}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
             <td style="text-align:center;">${App.escapeHtml(it.Progress_Plan_Text)}</td>
-            <td><input type="number" step="0.1" class="kpi-num" value="${c6}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
+            <td><input type="number" step="0.1" min="0.1" class="kpi-num" value="${c6}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
             <td class="kpi-calc" id="c7-${i}">${fmtN(c4 * c6)}</td>
 
             <td style="text-align:center;">
-              <input type="number" step="0.25" class="kpi-num" value="${it.Kpi_Qty_Actual}" oninput="updateItemField(${i},'Kpi_Qty_Actual',this.value)">
+              <input type="number" step="0.25" min="0" class="kpi-num" value="${v8}" placeholder="0" oninput="updateItemField(${i},'Kpi_Qty_Actual',this.value)">
               <button type="button" class="btn-deduct" onclick="deductError(${i},'Kpi_Qty_Actual','SL')">-0.25</button>
             </td>
-            <td class="kpi-calc" id="c9-${i}">${fmtN((Number(it.Kpi_Qty_Actual) || 0) * c6)}</td>
+            <td class="kpi-calc" id="c9-${i}">${fmtN((Number(v8) || 0) * c6)}</td>
 
             <td style="text-align:center;">
-              <input type="number" step="0.25" class="kpi-num" value="${it.Kpi_Qual_Actual}" oninput="updateItemField(${i},'Kpi_Qual_Actual',this.value)">
+              <input type="number" step="0.25" min="0" class="kpi-num" value="${v10}" placeholder="0" oninput="updateItemField(${i},'Kpi_Qual_Actual',this.value)">
               <button type="button" class="btn-deduct" onclick="deductError(${i},'Kpi_Qual_Actual','CL')">-0.25</button>
             </td>
-            <td class="kpi-calc" id="c11-${i}">${fmtN((Number(it.Kpi_Qual_Actual) || 0) * c6)}</td>
+            <td class="kpi-calc" id="c11-${i}">${fmtN((Number(v10) || 0) * c6)}</td>
 
             <td style="text-align:center;">
-              <input type="number" step="0.25" class="kpi-num" value="${it.Kpi_Time_Actual}" oninput="updateItemField(${i},'Kpi_Time_Actual',this.value)">
+              <input type="number" step="0.25" min="0" class="kpi-num" value="${v12}" placeholder="0" oninput="updateItemField(${i},'Kpi_Time_Actual',this.value)">
               <button type="button" class="btn-deduct" onclick="deductError(${i},'Kpi_Time_Actual','TĐ')">-0.25</button>
             </td>
-            <td class="kpi-calc" id="c13-${i}">${fmtN((Number(it.Kpi_Time_Actual) || 0) * c6)}</td>
+            <td class="kpi-calc" id="c13-${i}">${fmtN((Number(v12) || 0) * c6)}</td>
 
             <td style="text-align:center;">
-              <input type="number" step="0.25" class="kpi-num" value="${it.Kpi_Lead_Actual}" oninput="updateItemField(${i},'Kpi_Lead_Actual',this.value)">
+              <input type="number" step="0.25" min="0" class="kpi-num" value="${v14}" placeholder="0" oninput="updateItemField(${i},'Kpi_Lead_Actual',this.value)">
               <button type="button" class="btn-deduct" onclick="deductError(${i},'Kpi_Lead_Actual','LĐ')">-0.25</button>
             </td>
-            <td class="kpi-calc" id="c15-${i}">${fmtN((Number(it.Kpi_Lead_Actual) || 0) * c6)}</td>
+            <td class="kpi-calc" id="c15-${i}">${fmtN((Number(v14) || 0) * c6)}</td>
 
             <td><input type="text" value="${App.escapeHtml(it.Self_Evaluation_Note)}" placeholder="Ghi chú tự đánh giá..." oninput="updateItemField(${i},'Self_Evaluation_Note',this.value)"></td>
           </tr>
@@ -483,9 +674,23 @@
 
     async function saveAllKpi() {
       if (!currentData) return;
+
+      const missingTitleIdx = currentData.items.findIndex(it =>
+        !it.Task_ID &&
+        !String(it.Title || '').trim() &&
+        (String(it.Product_Name || '').trim() || String(it.Submit_Level || '').trim() || String(it.Notes || '').trim())
+      );
+      if (missingTitleIdx !== -1) {
+        App.toast(`Dòng số ${missingTitleIdx + 1} chưa nhập "Nhiệm vụ theo kỳ". Vui lòng bổ sung hoặc xóa dòng nháp.`, 'error');
+        const el = document.getElementById(`plan-title-${missingTitleIdx}`);
+        if (el) el.focus();
+        return;
+      }
+
       syncHeaderInputs();
       const btn = document.getElementById('btn-save-kpi');
-      btn.disabled = true; btn.textContent = 'Đang lưu...';
+      btn.disabled = true;
+      btn.textContent = 'Đang lưu & đồng bộ nhiệm vụ...';
       try {
         const res = await ApiClient.call('kpi.saveMonthlyEvaluation', {
           userId: currentData.user.User_ID,
@@ -498,24 +703,33 @@
         });
         if (res.success) {
           const prevSel = {};
-          currentData.items.forEach(it => { prevSel[it.Task_ID] = it._selected; });
+          currentData.items.forEach(it => { if (it.Task_ID) prevSel[it.Task_ID] = it._selected; });
+          const createdCount = res.data.createdCount || 0;
           currentData = res.data;
           currentData.items.forEach(it => { it._selected = prevSel[it.Task_ID] !== false; });
-          App.toast('Đã lưu bảng danh mục và kết quả KPI.');
+          updatePeriodBadge();
           renderPlanTable();
           renderKpiTable();
+
+          const msg = createdCount > 0
+            ? `Đã tự động thêm mới ${createdCount} nhiệm vụ và lưu bảng đánh giá KPI thành công!`
+            : 'Đã lưu bảng danh mục và kết quả KPI thành công.';
+          App.toast(msg, 'success');
         } else {
           App.toast(res.message, 'error');
         }
+      } catch (err) {
+        App.toast(err.message, 'error');
       } finally {
-        btn.disabled = false; btn.textContent = '💾 Lưu KPI';
+        btn.disabled = false;
+        btn.textContent = '💾 Lưu Danh mục & KPI';
       }
     }
 
     function exportPlan(format) {
       if (!currentData) return;
       const selected = getSelectedItems();
-      if (!selected.length) return App.toast('Vui lòng tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
+      if (!selected.length) return App.toast('Vui lòng nhập và tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
       syncHeaderInputs();
       if (format === 'EXCEL') KpiExporter.exportPlanExcel(currentData, selected);
       else KpiExporter.exportPlanWord(currentData, selected);
@@ -524,7 +738,7 @@
     function exportKpi(format) {
       if (!currentData) return;
       const selected = getSelectedItems();
-      if (!selected.length) return App.toast('Vui lòng tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
+      if (!selected.length) return App.toast('Vui lòng nhập và tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
       syncHeaderInputs();
       const calc = computeKpiSummary();
       if (format === 'EXCEL') KpiExporter.exportKpiExcel(currentData, selected, calc);

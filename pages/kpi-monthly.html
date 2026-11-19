@@ -7,21 +7,42 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Danh mục Công việc & Đánh giá KPI</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-3">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-4">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#0f2942">
   <style>
     .kpi-grid-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .kpi-grid-table th, .kpi-grid-table td { border: 1px solid #cbd5e1; padding: 5px 4px; vertical-align: middle; }
-    .kpi-grid-table th { background: #0f2942; color: #fff; text-align: center; font-weight: 600; }
+    .kpi-grid-table th, .kpi-grid-table td { border: 1px solid #cbd5e1; padding: 5px 4px; vertical-align: top; }
+    .kpi-grid-table th { background: #0f2942; color: #fff; text-align: center; font-weight: 600; vertical-align: middle; }
     .kpi-grid-table input[type="text"],
     .kpi-grid-table input[type="number"],
     .kpi-grid-table input[type="date"],
-    .kpi-grid-table select {
-      width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 12px; font-family: inherit; background: #fff;
+    .kpi-grid-table select,
+    .kpi-grid-table textarea.kpi-textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 4px 5px;
+      font-size: 12px;
+      font-family: inherit;
+      background: #fff;
+      line-height: 1.38;
     }
-    .kpi-num { width: 56px !important; text-align: center; }
-    .kpi-calc { background: #f1f5f9; font-weight: 700; text-align: center; color: #0f2942; }
+    .kpi-grid-table textarea.kpi-textarea {
+      resize: none;
+      overflow: hidden;
+      min-height: 28px;
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .kpi-grid-table textarea.kpi-textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+    }
+    .kpi-num { width: 58px !important; text-align: center; }
+    .kpi-calc { background: #f1f5f9; font-weight: 700; text-align: center; color: #0f2942; vertical-align: middle !important; }
     .kpi-row-excluded { opacity: 0.45; background: #f8fafc; }
     .kpi-row-new { background: #f0fdf4; }
     .kpi-row-rec { background: #f5f3ff; }
@@ -32,11 +53,15 @@
     .date-mini { width: auto !important; max-width: 122px; padding: 2px 4px !important; font-size: 11px !important; }
     .btn-remove-draft { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; flex-shrink: 0; }
     .btn-remove-draft:hover { background: #fecaca; }
-    .kpi-total-row td { background: #e2e8f0; font-weight: 700; text-align: center; color: #0f172a; }
-    .kpi-pct-row td { background: #dbeafe; font-weight: 700; text-align: center; color: #1d4ed8; }
+    .kpi-total-row td { background: #e2e8f0; font-weight: 700; text-align: center; color: #0f172a; vertical-align: middle !important; }
+    .kpi-pct-row td { background: #dbeafe; font-weight: 700; text-align: center; color: #1d4ed8; vertical-align: middle !important; }
     .btn-deduct { display: inline-block; margin-top: 3px; padding: 1px 5px; font-size: 10px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer; }
     .btn-deduct:hover { background: #fecaca; }
-    .tab-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+    .zoom-toolbar { display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 7px; padding: 2px 4px; }
+    .zoom-toolbar .btn-zoom { border: none; background: #fff; color: #0f2942; border-radius: 5px; padding: 3px 8px; font-size: 12px; font-weight: 700; cursor: pointer; border: 1px solid #e2e8f0; }
+    .zoom-toolbar .btn-zoom:hover { background: #dbeafe; color: #1d4ed8; }
+    .zoom-toolbar .zoom-label { font-size: 11.5px; font-weight: 700; color: #0f2942; min-width: 40px; text-align: center; cursor: pointer; }
     .plan-action-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; justify-content: space-between; }
     .import-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .auto-save-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #0f2942; font-weight: 600; cursor: pointer; background: #eff6ff; padding: 4px 8px; border-radius: 6px; border: 1px solid #bfdbfe; }
@@ -44,6 +69,70 @@
     .summary-panel { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 14px; }
     .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; gap: 12px; }
     .period-badge { display: inline-block; padding: 4px 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 12px; font-weight: 600; }
+
+    /* ==================== CHẾ ĐỘ PHÓNG TO TOÀN MÀN HÌNH ==================== */
+    .fs-only-btn { display: none; }
+
+    body.kpi-fullscreen-active {
+      overflow: hidden !important;
+    }
+    body.kpi-fullscreen-active #mob-bottom-nav {
+      display: none !important;
+    }
+
+    #kpi-workspace-card.kpi-fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 10500 !important;
+      width: 100vw !important;
+      height: 100dvh !important;
+      max-width: none !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      border: none !important;
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 14px calc(10px + env(safe-area-inset-bottom, 0px)) 14px !important;
+      background: #ffffff !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+      box-shadow: none !important;
+    }
+
+    #kpi-workspace-card.kpi-fullscreen .fs-only-btn {
+      display: inline-flex;
+    }
+
+    #kpi-workspace-card.kpi-fullscreen .tab-bar {
+      flex-shrink: 0;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    #kpi-workspace-card.kpi-fullscreen #tab-plan,
+    #kpi-workspace-card.kpi-fullscreen #tab-kpi {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #kpi-workspace-card.kpi-fullscreen #tab-plan .table-responsive {
+      max-height: calc(100dvh - 155px);
+      overflow: auto;
+    }
+
+    #kpi-workspace-card.kpi-fullscreen #tab-kpi .table-responsive {
+      max-height: calc(100dvh - 180px);
+      overflow: auto;
+    }
+
+    /* Ghim cố định tiêu đề cột bảng khi cuộn dọc trong chế độ Toàn màn hình */
+    #kpi-workspace-card.kpi-fullscreen .kpi-grid-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 6;
+    }
   </style>
 </head>
 <body>
@@ -122,15 +211,25 @@
           </div>
         </div>
 
-        <!-- Tabs Mẫu 1 & Mẫu 2 -->
-        <div class="card" style="margin-top:14px;">
+        <!-- Tabs Mẫu 1 & Mẫu 2 (Hỗ trợ phóng to toàn màn hình + Tùy biến Zoom) -->
+        <div class="card" id="kpi-workspace-card" style="margin-top:14px;">
           <div class="tab-bar">
             <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
               <button class="btn btn-primary btn-sm" id="tab-btn-plan" onclick="switchKpiTab('PLAN')">1. Danh mục Sản phẩm/Công việc</button>
               <button class="btn btn-outline btn-sm" id="tab-btn-kpi" onclick="switchKpiTab('KPI')">2. Biểu tính điểm KPI cá nhân (16 cột)</button>
               <span id="lbl-period-badge" class="period-badge">Đang tải...</span>
             </div>
-            <small style="color:#64748b;">💡 Nhiệm vụ định kỳ lặp sẽ tự sinh từng kỳ ở mục Công việc & gộp 1 dòng trên Biểu KPI.</small>
+
+            <!-- Thanh phóng to toàn màn hình & tùy biến tỷ lệ Zoom -->
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <div class="zoom-toolbar" title="Tùy biến tỷ lệ phóng to / thu nhỏ bảng">
+                <button type="button" class="btn-zoom" onclick="changeKpiZoom(-10)" title="Thu nhỏ bảng">➖</button>
+                <span class="zoom-label" id="kpi-zoom-label" onclick="resetKpiZoom()" title="Bấm để về 100%">100%</span>
+                <button type="button" class="btn-zoom" onclick="changeKpiZoom(10)" title="Phóng to bảng">➕</button>
+              </div>
+              <button type="button" class="btn btn-primary btn-sm fs-only-btn" id="btn-save-kpi-fs" onclick="saveAllKpi()">💾 Lưu Danh mục & KPI</button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-fullscreen" onclick="toggleKpiFullscreen()">⛶ Phóng to toàn màn hình</button>
+            </div>
           </div>
 
           <!-- TAB 1: MẪU DANH MỤC CÔNG VIỆC -->
@@ -148,23 +247,24 @@
                   Tự động lưu ngay khi tải Excel
                 </label>
               </div>
+              <small style="color:#64748b;">💡 Mẹo: Bấm <strong>⛶ Phóng to toàn màn hình</strong> hoặc chỉnh <strong>➖ / ➕</strong> để xem trọn toàn bộ các cột.</small>
             </div>
 
             <div class="table-responsive">
-              <table class="kpi-grid-table">
+              <table class="kpi-grid-table" id="table-plan-grid">
                 <thead>
                   <tr>
-                    <th style="width:34px;"><input type="checkbox" id="chk-all-plan" checked onchange="toggleSelectAll(this.checked)"></th>
-                    <th style="width:38px;">TT</th>
-                    <th style="min-width:255px;">Nhiệm vụ theo kỳ & Lặp định kỳ</th>
-                    <th style="min-width:110px;">Cấp trình</th>
-                    <th style="min-width:155px;">Độ khó, mới, phức tạp; phạm vi tác động</th>
-                    <th style="min-width:135px;">Sản phẩm</th>
-                    <th>Số lượng</th>
-                    <th style="min-width:115px;">Tiến độ</th>
-                    <th style="min-width:120px;">Ghi chú</th>
-                    <th>Điểm chấm CV</th>
-                    <th>Hệ số quy đổi</th>
+                    <th style="width:32px;"><input type="checkbox" id="chk-all-plan" checked onchange="toggleSelectAll(this.checked)"></th>
+                    <th style="width:34px;">TT</th>
+                    <th style="min-width:280px;">Nhiệm vụ theo kỳ & Lặp định kỳ</th>
+                    <th style="min-width:130px;">Cấp trình</th>
+                    <th style="min-width:190px;">Độ khó, mới, phức tạp; phạm vi tác động</th>
+                    <th style="min-width:165px;">Sản phẩm</th>
+                    <th style="width:68px;">Số lượng</th>
+                    <th style="min-width:110px;">Tiến độ</th>
+                    <th style="min-width:130px;">Ghi chú</th>
+                    <th style="width:74px;">Điểm chấm CV</th>
+                    <th style="width:70px;">Hệ số quy đổi</th>
                   </tr>
                 </thead>
                 <tbody id="tbody-plan"></tbody>
@@ -175,17 +275,17 @@
           <!-- TAB 2: MẪU KPI 16 CỘT -->
           <div id="tab-kpi" style="display:none;">
             <div class="table-responsive">
-              <table class="kpi-grid-table">
+              <table class="kpi-grid-table" id="table-kpi-grid">
                 <thead>
                   <tr>
-                    <th rowspan="3" style="width:34px;"><input type="checkbox" id="chk-all-kpi" checked onchange="toggleSelectAll(this.checked)"></th>
+                    <th rowspan="3" style="width:32px;"><input type="checkbox" id="chk-all-kpi" checked onchange="toggleSelectAll(this.checked)"></th>
                     <th rowspan="3">TT</th>
                     <th colspan="6">NHIỆM VỤ ĐỀ RA KẾ HOẠCH</th>
                     <th colspan="9">THỰC TẾ TRIỂN KHAI</th>
                   </tr>
                   <tr>
-                    <th rowspan="2" style="min-width:180px;">Nhiệm vụ</th>
-                    <th rowspan="2" style="min-width:120px;">Sản phẩm</th>
+                    <th rowspan="2" style="min-width:210px;">Nhiệm vụ</th>
+                    <th rowspan="2" style="min-width:140px;">Sản phẩm</th>
                     <th rowspan="2">SL<br>(4)</th>
                     <th rowspan="2" style="min-width:95px;">Tiến độ<br>(5)</th>
                     <th rowspan="2">Hệ số<br>(6)</th>
@@ -194,7 +294,7 @@
                     <th colspan="2">KPI (Chất lượng)</th>
                     <th colspan="2">KPI (Tiến độ)</th>
                     <th colspan="2">KPI LĐ, CĐ, ĐH</th>
-                    <th rowspan="2" style="min-width:160px;">Cá nhân tự đánh giá<br>(16) (-0.25/lỗi)</th>
+                    <th rowspan="2" style="min-width:170px;">Cá nhân tự đánh giá<br>(16) (-0.25/lỗi)</th>
                   </tr>
                   <tr>
                     <th>TT (8)</th><th>QĐ (9)</th>
@@ -260,12 +360,14 @@
 
   <!-- Thư viện đọc/xuất Excel hỗ trợ công thức sống + kẻ khung & Times New Roman -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-  <script src="../assets/js/api.js?v=20261119-3"></script>
-  <script src="../assets/js/app.js?v=20261119-3"></script>
-  <script src="../assets/js/kpi-export.js?v=20261119-3"></script>
+  <script src="../assets/js/api.js?v=20261119-4"></script>
+  <script src="../assets/js/app.js?v=20261119-4"></script>
+  <script src="../assets/js/kpi-export.js?v=20261119-4"></script>
   <script>
     let currentData = null;
     let isSavingKpi = false;
+    let currentZoomPct = 100;
+    let isKpiFullscreen = false;
 
     const FREQ_LABELS = {
       NONE: 'Không lặp',
@@ -275,6 +377,64 @@
       YEARLY: 'Hàng năm',
       CUSTOM_DAYS: 'Định kỳ'
     };
+
+    /* =====================================================================
+     * PHÓNG TO TOÀN MÀN HÌNH, TÙY BIẾN ZOOM & TỰ GIÃN DÒNG Ô NHẬP LIỆU
+     * ===================================================================== */
+    function autoGrowEl(el) {
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = Math.max(28, el.scrollHeight) + 'px';
+    }
+
+    function autoGrowAllTextareas() {
+      requestAnimationFrame(() => {
+        document.querySelectorAll('#kpi-workspace-card textarea.kpi-textarea').forEach(autoGrowEl);
+      });
+    }
+
+    function applyKpiZoom() {
+      const ratio = currentZoomPct / 100;
+      const tblPlan = document.getElementById('table-plan-grid');
+      const tblKpi = document.getElementById('table-kpi-grid');
+      if (tblPlan) tblPlan.style.zoom = ratio;
+      if (tblKpi) tblKpi.style.zoom = ratio;
+      const lbl = document.getElementById('kpi-zoom-label');
+      if (lbl) lbl.textContent = currentZoomPct + '%';
+      autoGrowAllTextareas();
+    }
+
+    function changeKpiZoom(delta) {
+      currentZoomPct = Math.max(70, Math.min(130, currentZoomPct + delta));
+      applyKpiZoom();
+    }
+
+    function resetKpiZoom() {
+      currentZoomPct = 100;
+      applyKpiZoom();
+    }
+
+    function toggleKpiFullscreen(forceState) {
+      const card = document.getElementById('kpi-workspace-card');
+      const btn = document.getElementById('btn-toggle-fullscreen');
+      if (!card || !btn) return;
+
+      isKpiFullscreen = (typeof forceState === 'boolean') ? forceState : !isKpiFullscreen;
+      card.classList.toggle('kpi-fullscreen', isKpiFullscreen);
+      document.body.classList.toggle('kpi-fullscreen-active', isKpiFullscreen);
+
+      btn.textContent = isKpiFullscreen ? '🗗 Thu nhỏ về Web (Esc)' : '⛶ Phóng to toàn màn hình';
+      btn.className = isKpiFullscreen ? 'btn btn-danger btn-sm' : 'btn btn-outline btn-sm';
+      autoGrowAllTextareas();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isKpiFullscreen) {
+        toggleKpiFullscreen(false);
+      }
+    });
+
+    window.addEventListener('resize', autoGrowAllTextareas);
 
     function getTodayIso() {
       const d = new Date();
@@ -338,6 +498,7 @@
       document.getElementById('tab-btn-plan').className = tab === 'PLAN' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
       document.getElementById('tab-btn-kpi').className = tab === 'KPI' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
       if (tab === 'KPI') renderKpiTable(); else renderPlanTable();
+      autoGrowAllTextareas();
     }
 
     function updatePeriodBadge() {
@@ -642,9 +803,9 @@
 
         if (isNew) {
           titleCellHtml = `
-            <div style="display:flex; gap:4px; align-items:center;">
-              <span class="${isRepeatingNew ? 'badge-rec-row' : 'badge-new-row'}">${isRepeatingNew ? '🔁 Lặp' : 'Mới'}</span>
-              <input id="plan-title-${i}" type="text" value="${App.escapeHtml(it.Title)}" placeholder="Nhập tên nhiệm vụ..." oninput="updateItemField(${i},'Title',this.value)">
+            <div style="display:flex; gap:4px; align-items:flex-start;">
+              <span class="${isRepeatingNew ? 'badge-rec-row' : 'badge-new-row'}" style="margin-top:4px;">${isRepeatingNew ? '🔁 Lặp' : 'Mới'}</span>
+              <textarea id="plan-title-${i}" class="kpi-textarea" rows="1" placeholder="Nhập tên nhiệm vụ..." oninput="autoGrowEl(this); updateItemField(${i},'Title',this.value)">${App.escapeHtml(it.Title)}</textarea>
               <button type="button" class="btn-remove-draft" title="Xóa dòng nháp" onclick="removeDraftRow(${i})">✕</button>
             </div>
             <div class="rec-meta-bar">
@@ -673,9 +834,9 @@
 
           titleCellHtml = it.Can_Edit_Title
             ? `
-              <div style="display:flex; gap:4px; align-items:center;">
-                <span class="badge-rec-row">🔁 ${App.escapeHtml(FREQ_LABELS[freq] || freq)}</span>
-                <input id="plan-title-${i}" type="text" value="${App.escapeHtml(it.Title)}" oninput="updateItemField(${i},'Title',this.value)">
+              <div style="display:flex; gap:4px; align-items:flex-start;">
+                <span class="badge-rec-row" style="margin-top:4px;">🔁 ${App.escapeHtml(FREQ_LABELS[freq] || freq)}</span>
+                <textarea id="plan-title-${i}" class="kpi-textarea" rows="1" oninput="autoGrowEl(this); updateItemField(${i},'Title',this.value)">${App.escapeHtml(it.Title)}</textarea>
               </div>
               <div class="rec-meta-bar">
                 <small style="color:#5b21b6; font-weight:600;">${App.escapeHtml(it.Recurring_ID)} • ${progressNote}</small>
@@ -690,14 +851,14 @@
         } else {
           titleCellHtml = it.Can_Edit_Title
             ? `
-              <input id="plan-title-${i}" type="text" value="${App.escapeHtml(it.Title)}" oninput="updateItemField(${i},'Title',this.value)">
+              <textarea id="plan-title-${i}" class="kpi-textarea" rows="1" oninput="autoGrowEl(this); updateItemField(${i},'Title',this.value)">${App.escapeHtml(it.Title)}</textarea>
               <div class="rec-meta-bar">
                 <small style="color:#64748b;">${App.escapeHtml(it.Task_ID)} • Hạn:</small>
                 <input type="date" class="date-mini" value="${App.escapeHtml(it.Due_Date || currentData.toDate || '')}" oninput="updateItemField(${i},'Due_Date',this.value)">
               </div>
             `
             : `
-              <strong>${App.escapeHtml(it.Title)}</strong>
+              <strong style="white-space:pre-wrap; word-break:break-word;">${App.escapeHtml(it.Title)}</strong>
               <br><small style="color:#64748b;">${App.escapeHtml(it.Task_ID)} • Hạn: ${App.escapeHtml(it.Due_Date || '—')}</small>
             `;
         }
@@ -707,17 +868,19 @@
             <td style="text-align:center;"><input type="checkbox" ${it._selected !== false ? 'checked' : ''} onchange="toggleItemSelected(${i}, this.checked)"></td>
             <td style="text-align:center;">${i + 1}</td>
             <td>${titleCellHtml}</td>
-            <td><input type="text" value="${App.escapeHtml(it.Submit_Level)}" placeholder="VD: Đảng ủy..." oninput="updateItemField(${i},'Submit_Level',this.value)"></td>
-            <td><input type="text" value="${App.escapeHtml(it.Complexity_Scope)}" placeholder="Độ khó, phạm vi..." oninput="updateItemField(${i},'Complexity_Scope',this.value)"></td>
-            <td><input type="text" value="${App.escapeHtml(it.Product_Name)}" placeholder="Tên sản phẩm..." oninput="updateItemField(${i},'Product_Name',this.value)"></td>
-            <td><input type="number" step="0.25" min="0" class="kpi-num" value="${it.Plan_Quantity}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
-            <td><input type="text" value="${App.escapeHtml(it.Progress_Plan_Text)}" placeholder="VD: Trong tháng" oninput="updateItemField(${i},'Progress_Plan_Text',this.value)"></td>
-            <td><input type="text" value="${App.escapeHtml(it.Notes)}" placeholder="Ghi chú..." oninput="updateItemField(${i},'Notes',this.value)"></td>
-            <td><input type="number" step="0.5" min="0" class="kpi-num" value="${it.Task_Base_Score}" oninput="updateItemField(${i},'Task_Base_Score',this.value)"></td>
-            <td><input type="number" step="0.1" min="0.1" class="kpi-num" value="${it.Conversion_Coeff}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
+            <td><textarea class="kpi-textarea" rows="1" placeholder="VD: Đảng ủy..." oninput="autoGrowEl(this); updateItemField(${i},'Submit_Level',this.value)">${App.escapeHtml(it.Submit_Level)}</textarea></td>
+            <td><textarea class="kpi-textarea" rows="1" placeholder="Độ khó, phạm vi..." oninput="autoGrowEl(this); updateItemField(${i},'Complexity_Scope',this.value)">${App.escapeHtml(it.Complexity_Scope)}</textarea></td>
+            <td><textarea class="kpi-textarea" rows="1" placeholder="Tên sản phẩm..." oninput="autoGrowEl(this); updateItemField(${i},'Product_Name',this.value)">${App.escapeHtml(it.Product_Name)}</textarea></td>
+            <td style="text-align:center;"><input type="number" step="0.25" min="0" class="kpi-num" value="${it.Plan_Quantity}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
+            <td><textarea class="kpi-textarea" rows="1" placeholder="VD: Trong tháng" oninput="autoGrowEl(this); updateItemField(${i},'Progress_Plan_Text',this.value)">${App.escapeHtml(it.Progress_Plan_Text)}</textarea></td>
+            <td><textarea class="kpi-textarea" rows="1" placeholder="Ghi chú..." oninput="autoGrowEl(this); updateItemField(${i},'Notes',this.value)">${App.escapeHtml(it.Notes)}</textarea></td>
+            <td style="text-align:center;"><input type="number" step="0.5" min="0" class="kpi-num" value="${it.Task_Base_Score}" oninput="updateItemField(${i},'Task_Base_Score',this.value)"></td>
+            <td style="text-align:center;"><input type="number" step="0.1" min="0.1" class="kpi-num" value="${it.Conversion_Coeff}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
           </tr>
         `;
       }).join('');
+
+      autoGrowAllTextareas();
     }
 
     function renderKpiTable() {
@@ -755,11 +918,11 @@
           <tr class="${rowClass}">
             <td style="text-align:center;"><input type="checkbox" ${it._selected !== false ? 'checked' : ''} onchange="toggleItemSelected(${i}, this.checked)"></td>
             <td style="text-align:center;">${i + 1}</td>
-            <td>${App.escapeHtml(it.Title || '(Chưa nhập tên nhiệm vụ)')}${subTag}</td>
-            <td>${App.escapeHtml(it.Product_Name)}</td>
-            <td><input type="number" step="0.25" min="0" class="kpi-num" value="${c4}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
+            <td style="white-space:pre-wrap; word-break:break-word;">${App.escapeHtml(it.Title || '(Chưa nhập tên nhiệm vụ)')}${subTag}</td>
+            <td style="white-space:pre-wrap; word-break:break-word;">${App.escapeHtml(it.Product_Name)}</td>
+            <td style="text-align:center;"><input type="number" step="0.25" min="0" class="kpi-num" value="${c4}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
             <td style="text-align:center;">${App.escapeHtml(it.Progress_Plan_Text)}</td>
-            <td><input type="number" step="0.1" min="0.1" class="kpi-num" value="${c6}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
+            <td style="text-align:center;"><input type="number" step="0.1" min="0.1" class="kpi-num" value="${c6}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
             <td class="kpi-calc" id="c7-${i}">${fmtN(c4 * c6)}</td>
 
             <td style="text-align:center;">
@@ -786,11 +949,12 @@
             </td>
             <td class="kpi-calc" id="c15-${i}">${fmtN((Number(v14) || 0) * c6)}</td>
 
-            <td><input type="text" value="${App.escapeHtml(it.Self_Evaluation_Note)}" placeholder="Ghi chú tự đánh giá..." oninput="updateItemField(${i},'Self_Evaluation_Note',this.value)"></td>
+            <td><textarea class="kpi-textarea" rows="1" placeholder="Ghi chú tự đánh giá..." oninput="autoGrowEl(this); updateItemField(${i},'Self_Evaluation_Note',this.value)">${App.escapeHtml(it.Self_Evaluation_Note)}</textarea></td>
           </tr>
         `;
       }).join('');
       recalcTotals();
+      autoGrowAllTextareas();
     }
 
     function recalcRowAndTotals(i) {
@@ -852,6 +1016,16 @@
       currentData.summary.Self_Rating_Level = document.getElementById('in-rating-level').value;
     }
 
+    function setSaveButtonsState(disabled, label) {
+      ['btn-save-kpi', 'btn-save-kpi-fs'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) {
+          b.disabled = disabled;
+          b.textContent = label;
+        }
+      });
+    }
+
     async function saveAllKpi() {
       if (!currentData) return;
       if (isSavingKpi) {
@@ -873,11 +1047,9 @@
 
       syncHeaderInputs();
       isSavingKpi = true;
-      const btn = document.getElementById('btn-save-kpi');
       const btnImport = document.getElementById('btn-import-excel');
-      btn.disabled = true;
       if (btnImport) btnImport.disabled = true;
-      btn.textContent = 'Đang lưu & đồng bộ (vui lòng không bấm lại)...';
+      setSaveButtonsState(true, 'Đang lưu & đồng bộ (vui lòng chờ)...');
 
       try {
         const res = await ApiClient.call('kpi.saveMonthlyEvaluation', {
@@ -929,9 +1101,8 @@
         App.toast(err.message, 'error');
       } finally {
         isSavingKpi = false;
-        btn.disabled = false;
         if (btnImport) btnImport.disabled = false;
-        btn.textContent = '💾 Lưu Danh mục & KPI';
+        setSaveButtonsState(false, '💾 Lưu Danh mục & KPI');
       }
     }
 

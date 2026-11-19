@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qlcv-cache-v6';
+const CACHE_NAME = 'qlcv-cache-v7';
 const STATIC_ASSETS = [
   './',
   './login.html',

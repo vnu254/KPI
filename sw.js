@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qlcv-cache-v2';
+const CACHE_NAME = 'qlcv-cache-v3';
 const STATIC_ASSETS = [
   './',
   './login.html',
@@ -8,47 +8,72 @@ const STATIC_ASSETS = [
   './assets/js/app.js'
 ];
 
-// Cài đặt và lưu cache các tệp tĩnh (Giao diện)
+// Cài đặt và lưu cache từng tệp tĩnh an toàn (1 tệp lỗi không làm hỏng toàn bộ SW)
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(STATIC_ASSETS.map((asset) => cache.add(asset)))
+    )
   );
   self.skipWaiting();
 });
 
-// Xóa cache cũ khi có phiên bản mới
+// Xóa toàn bộ cache phiên bản cũ (v1, v2...) khi kích hoạt bản mới
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      )
+    )
   );
   self.clients.claim();
 });
 
-// Chặn các request API để luôn lấy dữ liệu mới, chỉ dùng cache cho Giao diện
+// Ưu tiên tải bản mới nhất từ mạng (Network-First), chỉ dùng Cache khi mất mạng
 self.addEventListener('fetch', (event) => {
+  // Bỏ qua mọi yêu cầu không phải GET (POST, PUT, DELETE...)
+  if (event.request.method !== 'GET') return;
+
   const url = new URL(event.request.url);
-  // Bỏ qua các API gọi tới Google Apps Script (luôn cần mạng)
-  if (url.hostname === 'script.google.com' || url.hostname === 'script.googleusercontent.com') {
+
+  // Chỉ xử lý giao thức http/https (tránh lỗi với chrome-extension://)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  // Bỏ qua các API gọi tới Google Apps Script (luôn đi thẳng qua mạng)
+  if (
+    url.hostname === 'script.google.com' ||
+    url.hostname === 'script.googleusercontent.com'
+  ) {
     return;
   }
-  
+
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // Ưu tiên trả về giao diện từ Cache, đồng thời tải ngầm giao diện mới từ mạng
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          networkResponse.type === 'basic'
+        ) {
+          // Nhân bản đồng bộ NGAY LẬP TỨC trước khi trả response cho trình duyệt
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
         return networkResponse;
-      }).catch(() => null);
-
-      return cachedResponse || fetchPromise;
-    })
+      })
+      .catch(() =>
+        caches.match(event.request).then((cachedResponse) => {
+          return (
+            cachedResponse ||
+            new Response('Không có kết nối mạng và chưa có dữ liệu lưu đệm.', {
+              status: 503,
+              headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+            })
+          );
+        })
+      )
   );
 });

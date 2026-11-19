@@ -1,15 +1,16 @@
 /**
  * TỆP: assets/js/api.js
- * CHỨC NĂNG: Kết nối Fetch API từ GitHub Pages sang Google Apps Script (Không lỗi CORS).
+ * CHỨC NĂNG: Kết nối Fetch API từ GitHub Pages sang Google Apps Script (Không lỗi CORS,
+ *            hỗ trợ thời gian chờ mở rộng cho tác vụ tải/lưu hàng loạt).
  */
 
-// ===> BẠN DÁN LINK WEB APP (/exec) CỦA GOOGLE APPS SCRIPT VÀO DÒNG DƯỚI ĐÂY <===
-const DEFAULT_GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbw9rRBFNiNZ3tcg_RHxxX5nUcILjL0BeeWsKCrs2c5YhXBqk7wg54wp33uo4FU_uahd/exec';
-
+// ===> LINK WEB APP (/exec) CỦA GOOGLE APPS SCRIPT <===
+const DEFAULT_GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbxqV10ITKNtPpPS4xS0QFh7v6EBZh5s0PMTU2kedNb6nDnzXi9K_fYVfrS2cwp9hPI6/exec';
 
 const AppConfig = {
   GAS_WEB_APP_URL: localStorage.getItem('CUSTOM_GAS_URL') || DEFAULT_GAS_EXEC_URL,
-  REQUEST_TIMEOUT_MS: 30000,
+  REQUEST_TIMEOUT_MS: 45000,
+  BULK_REQUEST_TIMEOUT_MS: 120000,
   SESSION_STORAGE_KEY: 'INTERNAL_TASK_APP_SESSION'
 };
 
@@ -49,16 +50,19 @@ const ApiClient = {
     }
   },
 
-  async call(action, payload = {}) {
+  async call(action, payload = {}, options = {}) {
     const rawEndpoint = localStorage.getItem('CUSTOM_GAS_URL') || AppConfig.GAS_WEB_APP_URL;
     const endpoint = this.normalizeGasUrl(rawEndpoint);
 
     if (!endpoint || endpoint.includes('PASTE_YOUR_') || endpoint.includes('THAY_MA_DEPLOYMENT')) {
-      throw new Error('Chưa cấu hình URL Google Apps Script (/exec). Vui lòng dán link vào dòng 6 của tệp assets/js/api.js hoặc nhập tại mục Cấu hình API URL.');
+      throw new Error('Chưa cấu hình URL Google Apps Script (/exec). Vui lòng dán link vào dòng 7 của tệp assets/js/api.js hoặc nhập tại mục Cấu hình API URL.');
     }
 
+    const isBulkAction = (action === 'kpi.saveMonthlyEvaluation' || action === 'recurring.generateDue');
+    const timeoutMs = Number(options.timeoutMs) || (isBulkAction ? AppConfig.BULK_REQUEST_TIMEOUT_MS : AppConfig.REQUEST_TIMEOUT_MS);
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), AppConfig.REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const requestBody = JSON.stringify({
       action: action,
@@ -72,7 +76,7 @@ const ApiClient = {
         method: 'POST',
         mode: 'cors',
         redirect: 'follow',
-        credentials: 'omit', // Chống lỗi xung đột khi trình duyệt đăng nhập nhiều Gmail
+        credentials: 'omit',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8'
         },
@@ -99,7 +103,7 @@ const ApiClient = {
     } catch (error) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        throw new Error('Yêu cầu quá thời gian chờ (30 giây). Vui lòng thử lại.');
+        throw new Error(`Yêu cầu quá thời gian chờ (${Math.round(timeoutMs / 1000)} giây). Hãy bấm "Lọc nhiệm vụ" để kiểm tra xem dữ liệu đã lưu trên máy chủ chưa trước khi thao tác lại.`);
       }
       throw error;
     }

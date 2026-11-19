@@ -1,9 +1,9 @@
 /**
  * TỆP: assets/js/kpi-export.js
  * CHỨC NĂNG:
- *  1. Xuất tệp Word (.doc) khổ A4 ngang và Excel (.xlsx) có công thức sống cho Mẫu 1 & Mẫu 2.
- *  2. Tải tệp Excel mẫu nhập liệu chuẩn 10 cột Danh mục sản phẩm/công việc (hỗ trợ PC, Android, iPhone).
- *  3. Đọc & phân tích tệp Excel (.xlsx/.xls) tải lên để tự động nạp danh sách nhiệm vụ vào KPI.
+ *  1. Xuất tệp Word (.doc) khổ A4 ngang và Excel (.xlsx) công thức sống cho Mẫu 1 (10 cột) & Mẫu 2 (16 cột).
+ *  2. Tải tệp Excel mẫu nhập liệu (10 cột chuẩn + 2 cột tùy chọn: Lặp lại & Lặp đến ngày).
+ *  3. Đọc & phân tích tệp Excel tải lên để nạp hàng loạt cả nhiệm vụ thường và nhiệm vụ lặp định kỳ.
  */
 
 const KpiExporter = {
@@ -334,7 +334,7 @@ const KpiExporter = {
     this._triggerBlobDownload(blob, filename);
   },
 
-  exportPlanExcel(data, selectedItems, customFilename) {
+  exportPlanExcel(data, selectedItems, customFilename, includeRepeatCols = false) {
     if (typeof XLSX === 'undefined') {
       throw new Error('Chưa tải được thư viện xuất Excel. Vui lòng kiểm tra kết nối mạng.');
     }
@@ -346,6 +346,7 @@ const KpiExporter = {
     const ws = {};
     const merges = [];
     const fontBase = { name: 'Times New Roman', sz: 11 };
+    const lastCol = includeRepeatCols ? 11 : 9;
 
     this._setCell(ws, 0, 0, { t: 's', v: `ĐẢNG ỦY ${s.Party_Committee || '.....................'}`, s: { font: { ...fontBase, sz: 12 }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, 0, 5, { t: 's', v: 'ĐẢNG CỘNG SẢN VIỆT NAM', s: { font: { ...fontBase, sz: 12, bold: true, underline: true }, alignment: { horizontal: 'center' } } });
@@ -357,21 +358,33 @@ const KpiExporter = {
     this._setCell(ws, 5, 1, { t: 's', v: `Chức vụ: ${user.Position || ''}`, s: { font: { ...fontBase, sz: 12 } } });
 
     merges.push(
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, { s: { r: 0, c: 5 }, e: { r: 0, c: 9 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }, { s: { r: 1, c: 5 }, e: { r: 1, c: 9 } },
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } }, { s: { r: 3, c: 0 }, e: { r: 3, c: 9 } },
-      { s: { r: 4, c: 1 }, e: { r: 4, c: 9 } }, { s: { r: 5, c: 1 }, e: { r: 5, c: 9 } }
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, { s: { r: 0, c: 5 }, e: { r: 0, c: lastCol } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }, { s: { r: 1, c: 5 }, e: { r: 1, c: lastCol } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } }, { s: { r: 3, c: 0 }, e: { r: 3, c: lastCol } },
+      { s: { r: 4, c: 1 }, e: { r: 4, c: lastCol } }, { s: { r: 5, c: 1 }, e: { r: 5, c: lastCol } }
     );
 
     const headers = [
       'TT', 'Nhiệm vụ theo tháng', 'Cấp trình', 'Độ khó, mới, phức tạp; phạm vi tác động',
       'Sản phẩm', 'Số lượng', 'Tiến độ', 'Ghi chú', 'Điểm chấm công việc', 'Hệ số quy đổi'
     ];
+    if (includeRepeatCols) {
+      headers.push(
+        'Lặp lại\n(Không / Hàng ngày / Hàng tuần / Hàng tháng)',
+        'Lặp đến ngày\n(dd/mm/yyyy - để trống = cuối kỳ)'
+      );
+    }
+
     headers.forEach((h, idx) => {
-      this._setCell(ws, 7, idx, {
-        t: 's', v: h,
-        s: { font: { ...fontBase, bold: true }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: this._borderThin() }
-      });
+      const styleObj = {
+        font: { ...fontBase, bold: true },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: this._borderThin()
+      };
+      if (includeRepeatCols && idx >= 10) {
+        styleObj.fill = { fgColor: { rgb: 'E0F2FE' } };
+      }
+      this._setCell(ws, 7, idx, { t: 's', v: h, s: styleObj });
     });
 
     const items = (selectedItems && selectedItems.length) ? selectedItems : [{}];
@@ -389,6 +402,12 @@ const KpiExporter = {
         { t: 'n', v: Number(it.Task_Base_Score) || 0, align: 'center' },
         { t: 'n', v: Number(it.Conversion_Coeff) || 1, align: 'center' }
       ];
+      if (includeRepeatCols) {
+        rowVals.push(
+          { t: 's', v: it._repeatLabel || 'Không', align: 'center' },
+          { t: 's', v: it._repeatEndLabel || '', align: 'center' }
+        );
+      }
       rowVals.forEach((cell, c) => {
         this._setCell(ws, r, c, {
           t: cell.t, v: cell.v,
@@ -405,18 +424,22 @@ const KpiExporter = {
     this._setCell(ws, sigRow + 5, 5, { t: 's', v: s.Secretary_Name || '..............................', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
 
     merges.push(
-      { s: { r: sigRow, c: 0 }, e: { r: sigRow, c: 4 } }, { s: { r: sigRow, c: 5 }, e: { r: sigRow, c: 9 } },
-      { s: { r: sigRow + 1, c: 5 }, e: { r: sigRow + 1, c: 9 } },
-      { s: { r: sigRow + 5, c: 0 }, e: { r: sigRow + 5, c: 4 } }, { s: { r: sigRow + 5, c: 5 }, e: { r: sigRow + 5, c: 9 } }
+      { s: { r: sigRow, c: 0 }, e: { r: sigRow, c: 4 } }, { s: { r: sigRow, c: 5 }, e: { r: sigRow, c: lastCol } },
+      { s: { r: sigRow + 1, c: 5 }, e: { r: sigRow + 1, c: lastCol } },
+      { s: { r: sigRow + 5, c: 0 }, e: { r: sigRow + 5, c: 4 } }, { s: { r: sigRow + 5, c: 5 }, e: { r: sigRow + 5, c: lastCol } }
     );
 
     ws['!merges'] = merges;
-    ws['!cols'] = [
+    const cols = [
       { wch: 5 }, { wch: 28 }, { wch: 13 }, { wch: 24 }, { wch: 20 },
       { wch: 10 }, { wch: 14 }, { wch: 16 }, { wch: 12 }, { wch: 11 }
     ];
-    ws['!rows'] = [{ hpt: 20 }, { hpt: 20 }, { hpt: 16 }, { hpt: 26 }, { hpt: 20 }, { hpt: 20 }, { hpt: 10 }, { hpt: 42 }];
-    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sigRow + 6, c: 9 } });
+    if (includeRepeatCols) {
+      cols.push({ wch: 18 }, { wch: 18 });
+    }
+    ws['!cols'] = cols;
+    ws['!rows'] = [{ hpt: 20 }, { hpt: 20 }, { hpt: 16 }, { hpt: 26 }, { hpt: 20 }, { hpt: 20 }, { hpt: 10 }, { hpt: 48 }];
+    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sigRow + 6, c: lastCol } });
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'DanhMucCongViec');
@@ -424,7 +447,7 @@ const KpiExporter = {
   },
 
   /**
-   * TẢI FILE EXCEL MẪU NHẬP LIỆU CHUẨN 10 CỘT (Kèm 2 dòng ví dụ để điền nhanh rồi tải lên lại)
+   * TẢI FILE EXCEL MẪU NHẬP LIỆU (10 cột chuẩn + 2 cột chọn lặp lại)
    */
   downloadPlanImportTemplate(data) {
     const sampleItems = [
@@ -435,23 +458,40 @@ const KpiExporter = {
         Product_Name: 'Kế hoạch công tác tháng',
         Plan_Quantity: 1,
         Progress_Plan_Text: 'Trước ngày 05 hàng tháng',
-        Notes: 'Xóa dòng ví dụ này khi nhập thực tế',
-        Task_Base_Score: 10,
-        Conversion_Coeff: 1.5
+        Notes: 'Ví dụ việc 1 lần (xóa khi nhập thật)',
+        Task_Base_Score: 100,
+        Conversion_Coeff: 1.2,
+        _repeatLabel: 'Không',
+        _repeatEndLabel: ''
       },
       {
-        Title: 'Kiểm tra công tác bảo đảm ăn uống và vệ sinh an toàn thực phẩm',
-        Submit_Level: 'Ban Hậu cần - Kỹ thuật',
-        Complexity_Scope: 'Thường xuyên, phạm vi các bếp ăn',
-        Product_Name: 'Biên bản kiểm tra tuần',
+        Title: 'Kiểm tra vệ sinh nhà ăn, nhà bếp và an toàn thực phẩm',
+        Submit_Level: 'Chủ nhiệm HC-KT',
+        Complexity_Scope: 'Thực hiện nhiệm vụ theo kế hoạch',
+        Product_Name: 'Báo cáo kết quả',
         Plan_Quantity: 4,
         Progress_Plan_Text: 'Hàng tuần',
-        Notes: '',
-        Task_Base_Score: 8,
-        Conversion_Coeff: 1
+        Notes: 'Ví dụ tự động lặp mỗi tuần',
+        Task_Base_Score: 100,
+        Conversion_Coeff: 1,
+        _repeatLabel: 'Hàng tuần',
+        _repeatEndLabel: ''
+      },
+      {
+        Title: 'Duy trì hệ thống công văn, sổ sách đơn vị',
+        Submit_Level: 'Chủ nhiệm HC-KT',
+        Complexity_Scope: 'Thực hiện nhiệm vụ theo kế hoạch',
+        Product_Name: 'Hệ thống công văn',
+        Plan_Quantity: 22,
+        Progress_Plan_Text: 'Hàng ngày',
+        Notes: 'Ví dụ tự động lặp mỗi ngày',
+        Task_Base_Score: 100,
+        Conversion_Coeff: 1,
+        _repeatLabel: 'Hàng ngày',
+        _repeatEndLabel: ''
       }
     ];
-    this.exportPlanExcel(data, sampleItems, `Mau_Nhap_Danh_Muc_Cong_Viec_${this.safeFileSuffix(data)}.xlsx`);
+    this.exportPlanExcel(data, sampleItems, `Mau_Nhap_Danh_Muc_Cong_Viec_${this.safeFileSuffix(data)}.xlsx`, true);
   },
 
   exportKpiExcel(data, selectedItems, calc) {
@@ -645,7 +685,7 @@ const KpiExporter = {
   },
 
   /* =========================================================================
-   * PHẦN 3: ĐỌC TỆP EXCEL MẪU DANH MỤC SẢN PHẨM/CÔNG VIỆC ĐỂ TỰ ĐỘNG THÊM NHIỆM VỤ
+   * PHẦN 3: ĐỌC TỆP EXCEL MẪU DANH MỤC (HỖ TRỢ CỘT LẶP LẠI & LẶP ĐẾN NGÀY)
    * ========================================================================= */
   _normText(v) {
     return String(v === undefined || v === null ? '' : v)
@@ -683,6 +723,18 @@ const KpiExporter = {
     return fallbackDate;
   },
 
+  _parseRepeatType(val) {
+    const t = this._normText(val);
+    if (!t || t === 'không' || t === 'khong' || t === 'none' || t === '1 lần' || t === '1 lan' || t === 'không lặp' || t === 'khong lap') {
+      return 'NONE';
+    }
+    if (t.includes('ngày') || t.includes('ngay') || t === 'daily') return 'DAILY';
+    if (t.includes('tuần') || t.includes('tuan') || t === 'weekly') return 'WEEKLY';
+    if (t.includes('tháng') || t.includes('thang') || t === 'monthly') return 'MONTHLY';
+    if (t.includes('năm') || t.includes('nam') || t === 'yearly') return 'YEARLY';
+    return 'NONE';
+  },
+
   parsePlanExcelFile(file, defaultDates = {}) {
     return new Promise((resolve, reject) => {
       if (typeof XLSX === 'undefined') {
@@ -705,7 +757,6 @@ const KpiExporter = {
             return;
           }
 
-          // 1. Tự dò tìm hàng tiêu đề của bảng 10 cột
           let headerRowIdx = -1;
           const scanLimit = Math.min(rows.length, 25);
           for (let r = 0; r < scanLimit; r++) {
@@ -723,7 +774,6 @@ const KpiExporter = {
             }
           }
 
-          // 2. Xác định vị trí từng cột (Tự ánh xạ theo tên cột, dự phòng theo thứ tự chuẩn 10 cột)
           const colMap = {
             title: 1,
             submitLevel: 2,
@@ -734,6 +784,8 @@ const KpiExporter = {
             notes: 7,
             baseScore: 8,
             coeff: 9,
+            repeatType: -1,
+            repeatEndDate: -1,
             dueDate: -1
           };
 
@@ -750,11 +802,12 @@ const KpiExporter = {
               else if (h.includes('ghi chú') || h.includes('ghi chu')) colMap.notes = idx;
               else if (h.includes('điểm chấm') || h.includes('diem cham')) colMap.baseScore = idx;
               else if (h.includes('hệ số') || h.includes('he so')) colMap.coeff = idx;
+              else if (h.includes('lặp đến') || h.includes('lap den') || h.includes('kết thúc lặp') || h.includes('ket thuc lap')) colMap.repeatEndDate = idx;
+              else if (h.includes('lặp lại') || h.includes('lap lai') || h.includes('chu kỳ') || h.includes('chu ky') || h.includes('tần suất') || h.includes('tan suat')) colMap.repeatType = idx;
               else if (h.includes('hạn hoàn thành') || h.includes('ngày đến hạn') || h.includes('han hoan thanh')) colMap.dueDate = idx;
             });
           }
 
-          // 3. Duyệt từng dòng dữ liệu nhiệm vụ
           const startIdx = headerRowIdx !== -1 ? headerRowIdx + 1 : 0;
           const stopKeywords = ['người lập', 'nguoi lap', 't/m cấp ủy', 'tm cấp ủy', 'tổng cộng', 'tong cong', 'tổng %'];
           const parsedItems = [];
@@ -764,7 +817,6 @@ const KpiExporter = {
             const rowJoined = row.map(c => this._normText(c)).join(' ');
             if (!rowJoined) continue;
 
-            // Dừng đọc khi gặp khối chữ ký hoặc dòng tổng cuối bảng
             if (stopKeywords.some(kw => rowJoined.includes(kw))) {
               if (parsedItems.length > 0 || r > startIdx + 1) break;
               continue;
@@ -773,7 +825,6 @@ const KpiExporter = {
             const titleRaw = String(row[colMap.title] !== undefined ? row[colMap.title] : '').trim();
             const titleNorm = this._normText(titleRaw);
 
-            // Bỏ qua dòng trống hoặc dòng đánh số cột (1), (2), (3)
             if (!titleRaw || titleNorm === '(2)' || titleNorm === 'nhiệm vụ theo tháng' || titleNorm === 'nhiệm vụ') {
               continue;
             }
@@ -785,12 +836,26 @@ const KpiExporter = {
               defaultDates.toDate || ''
             );
 
+            // Chỉ tự gắn lặp khi file Excel có Cột 11 ("Lặp lại"); nếu là file 10 cột cũ thì để "Không lặp" để người dùng chủ động chọn từng dòng trên bảng
+            const freqType = (colMap.repeatType !== -1)
+              ? this._parseRepeatType(row[colMap.repeatType])
+              : 'NONE';
+
+            const rawRepEndCell = colMap.repeatEndDate !== -1 ? this._formatCellTextOrDate(row[colMap.repeatEndDate]) : '';
+            const repeatEndDate = freqType !== 'NONE'
+              ? this._extractIsoDateFromText(rawRepEndCell, defaultDates.toDate || '')
+              : '';
+
             parsedItems.push({
               Task_ID: '',
+              Recurring_ID: '',
+              Is_Recurring_Group: false,
+              Frequency_Type: freqType,
+              Repeat_End_Date: repeatEndDate,
               _isNew: true,
               _selected: true,
               Title: titleRaw,
-              Start_Date: defaultDates.fromDate || '',
+              Start_Date: freqType !== 'NONE' ? (defaultDates.repeatStartDate || defaultDates.fromDate || '') : (defaultDates.fromDate || ''),
               Due_Date: detectedDue,
               Submit_Level: String(row[colMap.submitLevel] !== undefined ? row[colMap.submitLevel] : '').trim(),
               Complexity_Scope: String(row[colMap.complexity] !== undefined ? row[colMap.complexity] : '').trim(),
@@ -815,7 +880,7 @@ const KpiExporter = {
             return;
           }
 
-          resolve({ items: parsedItems });
+          resolve({ items: parsedItems, hasRepeatColumn: colMap.repeatType !== -1 });
         } catch (err) {
           reject(new Error('Lỗi đọc tệp Excel: ' + err.message));
         }

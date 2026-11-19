@@ -7,22 +7,30 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Danh mục Công việc & Đánh giá KPI</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20261119">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-3">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#0f2942">
   <style>
     .kpi-grid-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .kpi-grid-table th, .kpi-grid-table td { border: 1px solid #cbd5e1; padding: 5px 4px; vertical-align: middle; }
     .kpi-grid-table th { background: #0f2942; color: #fff; text-align: center; font-weight: 600; }
-    .kpi-grid-table input[type="text"], .kpi-grid-table input[type="number"], .kpi-grid-table input[type="date"] {
-      width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 12px; font-family: inherit;
+    .kpi-grid-table input[type="text"],
+    .kpi-grid-table input[type="number"],
+    .kpi-grid-table input[type="date"],
+    .kpi-grid-table select {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 12px; font-family: inherit; background: #fff;
     }
     .kpi-num { width: 56px !important; text-align: center; }
     .kpi-calc { background: #f1f5f9; font-weight: 700; text-align: center; color: #0f2942; }
     .kpi-row-excluded { opacity: 0.45; background: #f8fafc; }
     .kpi-row-new { background: #f0fdf4; }
-    .badge-new-row { display: inline-block; padding: 1px 6px; font-size: 10px; font-weight: 700; background: #16a34a; color: #fff; border-radius: 10px; margin-right: 4px; }
-    .btn-remove-draft { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+    .kpi-row-rec { background: #f5f3ff; }
+    .badge-new-row { display: inline-block; padding: 1px 6px; font-size: 10px; font-weight: 700; background: #16a34a; color: #fff; border-radius: 10px; margin-right: 4px; flex-shrink: 0; }
+    .badge-rec-row { display: inline-block; padding: 1px 6px; font-size: 10px; font-weight: 700; background: #6d28d9; color: #fff; border-radius: 10px; margin-right: 4px; flex-shrink: 0; }
+    .rec-meta-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+    .rec-select-mini { width: auto !important; max-width: 132px; padding: 2px 4px !important; font-size: 11px !important; color: #4c1d95; font-weight: 600; border-color: #c4b5fd !important; background: #faf5ff !important; }
+    .date-mini { width: auto !important; max-width: 122px; padding: 2px 4px !important; font-size: 11px !important; }
+    .btn-remove-draft { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; flex-shrink: 0; }
     .btn-remove-draft:hover { background: #fecaca; }
     .kpi-total-row td { background: #e2e8f0; font-weight: 700; text-align: center; color: #0f172a; }
     .kpi-pct-row td { background: #dbeafe; font-weight: 700; text-align: center; color: #1d4ed8; }
@@ -51,14 +59,14 @@
             <div class="card-title">🏅 Triển khai Danh mục Công việc & Tính điểm KPI Cá nhân</div>
             <div class="export-group">
               <button class="btn btn-primary btn-sm" id="btn-save-kpi" onclick="saveAllKpi()">💾 Lưu Danh mục & KPI</button>
-              <button class="btn btn-outline btn-sm" onclick="exportPlan('WORD')">📄 Tải Danh mục SP (word)</button>
-              <button class="btn btn-outline btn-sm" onclick="exportPlan('EXCEL')">📊 Tải Danh mục SP (excel)</button>
-              <button class="btn btn-success btn-sm" onclick="exportKpi('WORD')">📝 Tải bảng chấm điểm KPI (word)</button>
-              <button class="btn btn-success btn-sm" onclick="exportKpi('EXCEL')">📗 Tải bảng chấm điểm KPI (excel)</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPlan('WORD')">📄 Word Mẫu 1</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPlan('EXCEL')">📊 Excel Mẫu 1</button>
+              <button class="btn btn-success btn-sm" onclick="exportKpi('WORD')">📝 Word Mẫu 2 (KPI)</button>
+              <button class="btn btn-success btn-sm" onclick="exportKpi('EXCEL')">📗 Excel Mẫu 2 (KPI công thức)</button>
             </div>
           </div>
 
-          <!-- Bộ lọc thời gian: Theo tháng HOẶC Từ ngày - Đến ngày -->
+          <!-- Bộ lọc thời gian -->
           <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px;">
             <div class="form-group">
               <label>Kiểu chọn thời gian</label>
@@ -93,7 +101,7 @@
             </div>
           </div>
 
-          <!-- Cấu hình tiêu đề quốc hiệu/tiêu ngữ biểu mẫu -->
+          <!-- Tiêu đề biểu mẫu -->
           <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
             <div class="form-group">
               <label>Đảng ủy (Tiêu đề mẫu)</label>
@@ -122,10 +130,10 @@
               <button class="btn btn-outline btn-sm" id="tab-btn-kpi" onclick="switchKpiTab('KPI')">2. Biểu tính điểm KPI cá nhân (16 cột)</button>
               <span id="lbl-period-badge" class="period-badge">Đang tải...</span>
             </div>
-            <small style="color:#64748b;">💡 Bỏ tích ô vuông đầu dòng nếu muốn loại nhiệm vụ đó khỏi đợt đánh giá KPI & file xuất.</small>
+            <small style="color:#64748b;">💡 Nhiệm vụ định kỳ lặp sẽ tự sinh từng kỳ ở mục Công việc & gộp 1 dòng trên Biểu KPI.</small>
           </div>
 
-          <!-- TAB 1: MẪU DANH MỤC CÔNG VIỆC (KẾT HỢP NHẬP EXCEL TỰ ĐỘNG + NHẬP TAY TRỰC TIẾP) -->
+          <!-- TAB 1: MẪU DANH MỤC CÔNG VIỆC -->
           <div id="tab-plan">
             <div class="plan-action-bar">
               <div class="import-box">
@@ -135,8 +143,8 @@
                 <input type="file" id="in-import-plan-excel" accept=".xlsx,.xls" style="display:none;" onchange="handleImportPlanExcel(event)">
                 <button type="button" class="btn btn-success btn-sm" id="btn-import-excel" onclick="triggerImportExcel()">📤 Tải lên Excel Danh mục</button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="downloadImportTemplateBtn()">📥 Tải Excel mẫu nhập</button>
-                <label class="auto-save-toggle" title="Bật để tự động lưu thẳng vào hệ thống ngay sau khi tải tệp Excel lên">
-                  <input type="checkbox" id="chk-auto-save-import" checked>
+                <label class="auto-save-toggle" title="Tích chọn nếu file Excel đã điền sẵn cột Lặp lại và muốn tự lưu ngay lập tức">
+                  <input type="checkbox" id="chk-auto-save-import">
                   Tự động lưu ngay khi tải Excel
                 </label>
               </div>
@@ -148,10 +156,10 @@
                   <tr>
                     <th style="width:34px;"><input type="checkbox" id="chk-all-plan" checked onchange="toggleSelectAll(this.checked)"></th>
                     <th style="width:38px;">TT</th>
-                    <th style="min-width:210px;">Nhiệm vụ theo kỳ & Hạn HT</th>
+                    <th style="min-width:255px;">Nhiệm vụ theo kỳ & Lặp định kỳ</th>
                     <th style="min-width:110px;">Cấp trình</th>
-                    <th style="min-width:160px;">Độ khó, mới, phức tạp; phạm vi tác động</th>
-                    <th style="min-width:140px;">Sản phẩm</th>
+                    <th style="min-width:155px;">Độ khó, mới, phức tạp; phạm vi tác động</th>
+                    <th style="min-width:135px;">Sản phẩm</th>
                     <th>Số lượng</th>
                     <th style="min-width:115px;">Tiến độ</th>
                     <th style="min-width:120px;">Ghi chú</th>
@@ -176,7 +184,7 @@
                     <th colspan="9">THỰC TẾ TRIỂN KHAI</th>
                   </tr>
                   <tr>
-                    <th rowspan="2" style="min-width:160px;">Nhiệm vụ</th>
+                    <th rowspan="2" style="min-width:180px;">Nhiệm vụ</th>
                     <th rowspan="2" style="min-width:120px;">Sản phẩm</th>
                     <th rowspan="2">SL<br>(4)</th>
                     <th rowspan="2" style="min-width:95px;">Tiến độ<br>(5)</th>
@@ -252,11 +260,45 @@
 
   <!-- Thư viện đọc/xuất Excel hỗ trợ công thức sống + kẻ khung & Times New Roman -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/app.js?v=20261119"></script>
-  <script src="../assets/js/kpi-export.js?v=20261119"></script>
+  <script src="../assets/js/api.js?v=20261119-3"></script>
+  <script src="../assets/js/app.js?v=20261119-3"></script>
+  <script src="../assets/js/kpi-export.js?v=20261119-3"></script>
   <script>
     let currentData = null;
+    let isSavingKpi = false;
+
+    const FREQ_LABELS = {
+      NONE: 'Không lặp',
+      DAILY: 'Hàng ngày',
+      WEEKLY: 'Hàng tuần',
+      MONTHLY: 'Hàng tháng',
+      YEARLY: 'Hàng năm',
+      CUSTOM_DAYS: 'Định kỳ'
+    };
+
+    function getTodayIso() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function getDefaultRepeatStartDate() {
+      if (!currentData) return getTodayIso();
+      const today = getTodayIso();
+      if (currentData.fromDate && currentData.toDate && currentData.fromDate <= today && today <= currentData.toDate) {
+        return today;
+      }
+      return currentData.fromDate || today;
+    }
+
+    function isNewDraftItem(it) {
+      return !it.Task_ID && !it.Recurring_ID;
+    }
+
+    function getItemPersistKey(it) {
+      if (it.Recurring_ID) return 'REC:' + it.Recurring_ID;
+      if (it.Task_ID) return 'TSK:' + it.Task_ID;
+      return '';
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
       const user = await App.initProtectedPage('kpi', 'Đánh giá KPI & Danh mục Công việc');
@@ -301,12 +343,19 @@
     function updatePeriodBadge() {
       if (!currentData) return;
       const total = (currentData.items || []).length;
-      const draftCount = (currentData.items || []).filter(x => !x.Task_ID).length;
-      const draftText = draftCount > 0 ? ` • ${draftCount} dòng mới chưa lưu` : '';
-      document.getElementById('lbl-period-badge').textContent = `Kỳ đánh giá: ${currentData.periodLabel} (${total} nhiệm vụ${draftText})`;
+      const draftCount = (currentData.items || []).filter(isNewDraftItem).length;
+      const recCount = (currentData.items || []).filter(x => x.Recurring_ID || (x.Frequency_Type && x.Frequency_Type !== 'NONE')).length;
+      const parts = [`${total} mục`];
+      if (recCount > 0) parts.push(`${recCount} định kỳ`);
+      if (draftCount > 0) parts.push(`${draftCount} dòng mới chưa lưu`);
+      document.getElementById('lbl-period-badge').textContent = `Kỳ đánh giá: ${currentData.periodLabel} (${parts.join(' • ')})`;
     }
 
     async function loadMonthlyData() {
+      if (isSavingKpi) {
+        App.toast('Đang lưu dữ liệu, vui lòng đợi hoàn tất...', 'error');
+        return;
+      }
       const filterMode = document.getElementById('f-mode').value;
       const payload = {
         userId: document.getElementById('f-user').value,
@@ -338,9 +387,13 @@
     }
 
     /* =====================================================================
-     * CHỨC NĂNG 1: TẢI LÊN FILE EXCEL DANH MỤC SẢN PHẨM -> TỰ CẬP NHẬT THÊM
+     * CHỨC NĂNG 1: TẢI LÊN FILE EXCEL DANH MỤC SẢN PHẨM (KÈM CHU KỲ LẶP)
      * ===================================================================== */
     function triggerImportExcel() {
+      if (isSavingKpi) {
+        App.toast('Đang lưu dữ liệu, vui lòng chờ xong lượt hiện tại.', 'error');
+        return;
+      }
       if (!currentData) {
         App.toast('Vui lòng đợi dữ liệu kỳ đánh giá tải xong trước khi tải tệp Excel.', 'error');
         return;
@@ -368,7 +421,7 @@
         if (currentData) syncHeaderInputs();
 
         KpiExporter.downloadPlanImportTemplate(safeData);
-        App.toast('Đang tải tệp Excel mẫu nhập danh mục công việc...', 'success');
+        App.toast('Đang tải tệp Excel mẫu (có sẵn cột Lặp lại: Hàng ngày / Hàng tuần / Hàng tháng)...', 'success');
       } catch (err) {
         console.error('Lỗi tải Excel mẫu:', err);
         App.toast('Lỗi tạo tệp Excel mẫu: ' + err.message, 'error');
@@ -378,7 +431,10 @@
     async function handleImportPlanExcel(event) {
       const input = event.target;
       const file = input.files && input.files[0];
-      if (!file || !currentData) return;
+      if (!file || !currentData || isSavingKpi) {
+        input.value = '';
+        return;
+      }
 
       const btn = document.getElementById('btn-import-excel');
       btn.disabled = true;
@@ -387,10 +443,10 @@
       try {
         const result = await KpiExporter.parsePlanExcelFile(file, {
           fromDate: currentData.fromDate,
-          toDate: currentData.toDate
+          toDate: currentData.toDate,
+          repeatStartDate: getDefaultRepeatStartDate()
         });
 
-        // Lọc tránh trùng nhiệm vụ đã có sẵn trong kỳ (so sánh theo Tên nhiệm vụ + Sản phẩm)
         const existingKeys = new Set(
           (currentData.items || []).map(it =>
             `${String(it.Title || '').trim().toLowerCase()}||${String(it.Product_Name || '').trim().toLowerCase()}`
@@ -398,6 +454,7 @@
         );
 
         let addedCount = 0;
+        let addedRecCount = 0;
         let skippedDupCount = 0;
 
         result.items.forEach(newItem => {
@@ -409,6 +466,7 @@
           existingKeys.add(key);
           currentData.items.push(newItem);
           addedCount++;
+          if (newItem.Frequency_Type && newItem.Frequency_Type !== 'NONE') addedRecCount++;
         });
 
         if (addedCount === 0) {
@@ -420,14 +478,15 @@
         renderPlanTable();
         renderKpiTable();
 
-        const dupMsg = skippedDupCount > 0 ? ` (bỏ qua ${skippedDupCount} dòng trùng)` : '';
+        const recNote = addedRecCount > 0 ? ` (gồm ${addedRecCount} nhiệm vụ lặp định kỳ)` : '';
+        const dupMsg = skippedDupCount > 0 ? `, bỏ qua ${skippedDupCount} dòng trùng` : '';
         const autoSave = document.getElementById('chk-auto-save-import').checked;
 
         if (autoSave) {
-          App.toast(`Đã đọc ${addedCount} nhiệm vụ mới từ Excel${dupMsg}. Đang tự động lưu vào hệ thống...`, 'success');
+          App.toast(`Đã đọc ${addedCount} nhiệm vụ mới${recNote}${dupMsg}. Đang lưu vào hệ thống...`, 'success');
           await saveAllKpi();
         } else {
-          App.toast(`Đã nạp ${addedCount} nhiệm vụ từ Excel${dupMsg}. Hãy kiểm tra lại rồi bấm [💾 Lưu Danh mục & KPI].`, 'success');
+          App.toast(`Đã nạp ${addedCount} nhiệm vụ nháp${recNote}${dupMsg}. Chọn chu kỳ lặp (nếu cần) rồi bấm [💾 Lưu Danh mục & KPI].`, 'success');
         }
       } catch (err) {
         App.toast(err.message, 'error');
@@ -439,7 +498,7 @@
     }
 
     /* =====================================================================
-     * CHỨC NĂNG 2: THÊM DÒNG NHẬP TAY TRỰC TIẾP THEO MẪU DANH MỤC SẢN PHẨM
+     * CHỨC NĂNG 2: THÊM DÒNG NHẬP TAY & CHỌN LẶP TRỰC TIẾP TRÊN BẢNG
      * ===================================================================== */
     function addNewPlanRows(count = 1) {
       if (!currentData) {
@@ -450,6 +509,10 @@
       for (let k = 0; k < count; k++) {
         currentData.items.push({
           Task_ID: '',
+          Recurring_ID: '',
+          Is_Recurring_Group: false,
+          Frequency_Type: 'NONE',
+          Repeat_End_Date: '',
           _isNew: true,
           _selected: true,
           Title: '',
@@ -481,8 +544,31 @@
     }
 
     function removeDraftRow(idx) {
-      if (!currentData || !currentData.items[idx] || currentData.items[idx].Task_ID) return;
+      if (!currentData || !currentData.items[idx] || !isNewDraftItem(currentData.items[idx])) return;
       currentData.items.splice(idx, 1);
+      updatePeriodBadge();
+      renderPlanTable();
+      renderKpiTable();
+    }
+
+    function handleFrequencyChange(idx, newFreq) {
+      if (!currentData || !currentData.items[idx]) return;
+      const it = currentData.items[idx];
+      it.Frequency_Type = newFreq;
+
+      if (newFreq !== 'NONE') {
+        if (isNewDraftItem(it)) {
+          it.Start_Date = getDefaultRepeatStartDate();
+        }
+        if (!it.Repeat_End_Date) {
+          it.Repeat_End_Date = currentData.toDate || '';
+        }
+        if (!String(it.Progress_Plan_Text || '').trim()) {
+          it.Progress_Plan_Text = FREQ_LABELS[newFreq] || '';
+        }
+      } else {
+        it.Repeat_End_Date = '';
+      }
       updatePeriodBadge();
       renderPlanTable();
       renderKpiTable();
@@ -541,26 +627,80 @@
         tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:22px;color:#64748b;">Chưa có nhiệm vụ nào trong kỳ này. Bấm <strong>📤 Tải lên Excel Danh mục</strong> hoặc <strong>➕ Thêm dòng nhiệm vụ</strong> phía trên để nhập.</td></tr>';
         return;
       }
-      tbody.innerHTML = currentData.items.map((it, i) => {
-        const isNew = !it.Task_ID;
-        const rowClass = it._selected === false ? 'kpi-row-excluded' : (isNew ? 'kpi-row-new' : '');
 
-        const titleCellHtml = (isNew || it.Can_Edit_Title)
-          ? `
+      tbody.innerHTML = currentData.items.map((it, i) => {
+        const isNew = isNewDraftItem(it);
+        const isRecGroup = Boolean(it.Recurring_ID);
+        const freq = String(it.Frequency_Type || 'NONE').toUpperCase();
+        const isRepeatingNew = isNew && freq !== 'NONE';
+
+        const rowClass = it._selected === false
+          ? 'kpi-row-excluded'
+          : (isNew ? 'kpi-row-new' : (isRecGroup ? 'kpi-row-rec' : ''));
+
+        let titleCellHtml = '';
+
+        if (isNew) {
+          titleCellHtml = `
             <div style="display:flex; gap:4px; align-items:center;">
-              ${isNew ? '<span class="badge-new-row">Mới</span>' : ''}
-              <input id="plan-title-${i}" type="text" value="${App.escapeHtml(it.Title)}" placeholder="Nhập tên nhiệm vụ theo tháng..." oninput="updateItemField(${i},'Title',this.value)">
-              ${isNew ? `<button type="button" class="btn-remove-draft" title="Xóa dòng nháp" onclick="removeDraftRow(${i})">✕</button>` : ''}
+              <span class="${isRepeatingNew ? 'badge-rec-row' : 'badge-new-row'}">${isRepeatingNew ? '🔁 Lặp' : 'Mới'}</span>
+              <input id="plan-title-${i}" type="text" value="${App.escapeHtml(it.Title)}" placeholder="Nhập tên nhiệm vụ..." oninput="updateItemField(${i},'Title',this.value)">
+              <button type="button" class="btn-remove-draft" title="Xóa dòng nháp" onclick="removeDraftRow(${i})">✕</button>
             </div>
-            <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
-              <small style="color:#64748b; white-space:nowrap;">${isNew ? 'Hạn HT:' : App.escapeHtml(it.Task_ID) + ' • Hạn:'}</small>
-              <input type="date" value="${App.escapeHtml(it.Due_Date || currentData.toDate || '')}" style="max-width:130px; padding:2px 4px; font-size:11px;" oninput="updateItemField(${i},'Due_Date',this.value)">
+            <div class="rec-meta-bar">
+              <select class="rec-select-mini" title="Chọn chu kỳ lặp lại" onchange="handleFrequencyChange(${i}, this.value)">
+                <option value="NONE" ${freq === 'NONE' ? 'selected' : ''}>Không lặp (1 lần)</option>
+                <option value="DAILY" ${freq === 'DAILY' ? 'selected' : ''}>🔁 Lặp Hàng ngày</option>
+                <option value="WEEKLY" ${freq === 'WEEKLY' ? 'selected' : ''}>🔁 Lặp Hàng tuần</option>
+                <option value="MONTHLY" ${freq === 'MONTHLY' ? 'selected' : ''}>🔁 Lặp Hàng tháng</option>
+                <option value="YEARLY" ${freq === 'YEARLY' ? 'selected' : ''}>🔁 Lặp Hàng năm</option>
+              </select>
+              ${isRepeatingNew ? `
+                <small style="color:#64748b;">Từ:</small>
+                <input type="date" class="date-mini" value="${App.escapeHtml(it.Start_Date || getDefaultRepeatStartDate())}" oninput="updateItemField(${i},'Start_Date',this.value)">
+                <small style="color:#64748b;">Đến:</small>
+                <input type="date" class="date-mini" value="${App.escapeHtml(it.Repeat_End_Date || currentData.toDate || '')}" oninput="updateItemField(${i},'Repeat_End_Date',this.value)">
+              ` : `
+                <small style="color:#64748b;">Hạn HT:</small>
+                <input type="date" class="date-mini" value="${App.escapeHtml(it.Due_Date || currentData.toDate || '')}" oninput="updateItemField(${i},'Due_Date',this.value)">
+              `}
             </div>
-          `
-          : `
-            <strong>${App.escapeHtml(it.Title)}</strong>
-            <br><small style="color:#64748b;">${App.escapeHtml(it.Task_ID)} • Hạn: ${App.escapeHtml(it.Due_Date || '—')}</small>
           `;
+        } else if (isRecGroup) {
+          const progressNote = (it.Instance_Count > 0)
+            ? `HT ${it.Completed_Instance_Count}/${it.Instance_Count} kỳ đã sinh`
+            : `Chờ đến ngày bắt đầu (${it.Start_Date || '—'})`;
+
+          titleCellHtml = it.Can_Edit_Title
+            ? `
+              <div style="display:flex; gap:4px; align-items:center;">
+                <span class="badge-rec-row">🔁 ${App.escapeHtml(FREQ_LABELS[freq] || freq)}</span>
+                <input id="plan-title-${i}" type="text" value="${App.escapeHtml(it.Title)}" oninput="updateItemField(${i},'Title',this.value)">
+              </div>
+              <div class="rec-meta-bar">
+                <small style="color:#5b21b6; font-weight:600;">${App.escapeHtml(it.Recurring_ID)} • ${progressNote}</small>
+                <small style="color:#64748b;">Lặp đến:</small>
+                <input type="date" class="date-mini" value="${App.escapeHtml(it.Repeat_End_Date || '')}" oninput="updateItemField(${i},'Repeat_End_Date',this.value)">
+              </div>
+            `
+            : `
+              <div><span class="badge-rec-row">🔁 ${App.escapeHtml(FREQ_LABELS[freq] || freq)}</span><strong>${App.escapeHtml(it.Title)}</strong></div>
+              <small style="color:#5b21b6;">${App.escapeHtml(it.Recurring_ID)} • ${progressNote}</small>
+            `;
+        } else {
+          titleCellHtml = it.Can_Edit_Title
+            ? `
+              <input id="plan-title-${i}" type="text" value="${App.escapeHtml(it.Title)}" oninput="updateItemField(${i},'Title',this.value)">
+              <div class="rec-meta-bar">
+                <small style="color:#64748b;">${App.escapeHtml(it.Task_ID)} • Hạn:</small>
+                <input type="date" class="date-mini" value="${App.escapeHtml(it.Due_Date || currentData.toDate || '')}" oninput="updateItemField(${i},'Due_Date',this.value)">
+              </div>
+            `
+            : `
+              <strong>${App.escapeHtml(it.Title)}</strong>
+              <br><small style="color:#64748b;">${App.escapeHtml(it.Task_ID)} • Hạn: ${App.escapeHtml(it.Due_Date || '—')}</small>
+            `;
+        }
 
         return `
           <tr class="${rowClass}">
@@ -588,18 +728,34 @@
         return;
       }
       tbody.innerHTML = currentData.items.map((it, i) => {
+        const isNew = isNewDraftItem(it);
+        const isRecGroup = Boolean(it.Recurring_ID);
+        const freq = String(it.Frequency_Type || 'NONE').toUpperCase();
         const c4 = Number(it.Plan_Quantity) || 0, c6 = Number(it.Conversion_Coeff) || 1;
         const v8 = it.Kpi_Qty_Actual !== undefined ? it.Kpi_Qty_Actual : '';
         const v10 = it.Kpi_Qual_Actual !== undefined ? it.Kpi_Qual_Actual : '';
         const v12 = it.Kpi_Time_Actual !== undefined ? it.Kpi_Time_Actual : '';
         const v14 = it.Kpi_Lead_Actual !== undefined ? it.Kpi_Lead_Actual : '';
-        const rowClass = it._selected === false ? 'kpi-row-excluded' : (!it.Task_ID ? 'kpi-row-new' : '');
+
+        const rowClass = it._selected === false
+          ? 'kpi-row-excluded'
+          : (isNew ? 'kpi-row-new' : (isRecGroup ? 'kpi-row-rec' : ''));
+
+        let subTag = '';
+        if (isRecGroup) {
+          const statTxt = it.Instance_Count > 0
+            ? `HT ${it.Completed_Instance_Count}/${it.Instance_Count} kỳ`
+            : 'Chờ kỳ đầu';
+          subTag = `<div style="margin-top:2px;"><span class="badge-rec-row">🔁 ${App.escapeHtml(FREQ_LABELS[freq] || freq)} • ${statTxt}</span></div>`;
+        } else if (isNew) {
+          subTag = `<div style="margin-top:2px;"><span class="${freq !== 'NONE' ? 'badge-rec-row' : 'badge-new-row'}">${freq !== 'NONE' ? '🔁 ' + App.escapeHtml(FREQ_LABELS[freq]) + ' (Mới)' : 'Mới chưa lưu'}</span></div>`;
+        }
 
         return `
           <tr class="${rowClass}">
             <td style="text-align:center;"><input type="checkbox" ${it._selected !== false ? 'checked' : ''} onchange="toggleItemSelected(${i}, this.checked)"></td>
             <td style="text-align:center;">${i + 1}</td>
-            <td>${!it.Task_ID ? '<span class="badge-new-row">Mới</span>' : ''}${App.escapeHtml(it.Title || '(Chưa nhập tên nhiệm vụ)')}</td>
+            <td>${App.escapeHtml(it.Title || '(Chưa nhập tên nhiệm vụ)')}${subTag}</td>
             <td>${App.escapeHtml(it.Product_Name)}</td>
             <td><input type="number" step="0.25" min="0" class="kpi-num" value="${c4}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
             <td style="text-align:center;">${App.escapeHtml(it.Progress_Plan_Text)}</td>
@@ -698,9 +854,13 @@
 
     async function saveAllKpi() {
       if (!currentData) return;
+      if (isSavingKpi) {
+        App.toast('Hệ thống đang lưu danh mục, vui lòng chờ xong...', 'error');
+        return;
+      }
 
       const missingTitleIdx = currentData.items.findIndex(it =>
-        !it.Task_ID &&
+        isNewDraftItem(it) &&
         !String(it.Title || '').trim() &&
         (String(it.Product_Name || '').trim() || String(it.Submit_Level || '').trim() || String(it.Notes || '').trim())
       );
@@ -712,9 +872,13 @@
       }
 
       syncHeaderInputs();
+      isSavingKpi = true;
       const btn = document.getElementById('btn-save-kpi');
+      const btnImport = document.getElementById('btn-import-excel');
       btn.disabled = true;
-      btn.textContent = 'Đang lưu & đồng bộ nhiệm vụ...';
+      if (btnImport) btnImport.disabled = true;
+      btn.textContent = 'Đang lưu & đồng bộ (vui lòng không bấm lại)...';
+
       try {
         const res = await ApiClient.call('kpi.saveMonthlyEvaluation', {
           userId: currentData.user.User_ID,
@@ -724,21 +888,39 @@
           toDate: currentData.toDate,
           items: currentData.items,
           summary: currentData.summary
-        });
+        }, { timeoutMs: 180000 });
+
         if (res.success) {
           const prevSel = {};
-          currentData.items.forEach(it => { if (it.Task_ID) prevSel[it.Task_ID] = it._selected; });
-          const createdCount = res.data.createdCount || 0;
+          currentData.items.forEach(it => {
+            const k = getItemPersistKey(it);
+            if (k) prevSel[k] = it._selected;
+          });
+
+          const createdSingle = res.data.createdSingleCount || 0;
+          const createdRec = res.data.createdRecurringCount || 0;
+          const skippedDup = res.data.skippedDuplicateCount || 0;
           currentData = res.data;
           if (!currentData.summary) currentData.summary = {};
-          currentData.items.forEach(it => { it._selected = prevSel[it.Task_ID] !== false; });
+          currentData.items.forEach(it => {
+            const k = getItemPersistKey(it);
+            it._selected = (k && prevSel[k] !== undefined) ? prevSel[k] : true;
+          });
+
           updatePeriodBadge();
           renderPlanTable();
           renderKpiTable();
 
-          const msg = createdCount > 0
-            ? `Đã tự động thêm mới ${createdCount} nhiệm vụ và lưu bảng đánh giá KPI thành công!`
-            : 'Đã lưu bảng danh mục và kết quả KPI thành công.';
+          let msg = 'Đã lưu bảng danh mục và kết quả KPI thành công.';
+          if (createdSingle > 0 || createdRec > 0) {
+            const segs = [];
+            if (createdSingle > 0) segs.push(`${createdSingle} nhiệm vụ đơn lẻ`);
+            if (createdRec > 0) segs.push(`${createdRec} chuỗi lặp định kỳ`);
+            msg = `Đã tạo ${segs.join(' và ')} & lưu KPI thành công!`;
+          }
+          if (skippedDup > 0) {
+            msg += ` (Đã tự chặn ${skippedDup} dòng trùng).`;
+          }
           App.toast(msg, 'success');
         } else {
           App.toast(res.message, 'error');
@@ -746,7 +928,9 @@
       } catch (err) {
         App.toast(err.message, 'error');
       } finally {
+        isSavingKpi = false;
         btn.disabled = false;
+        if (btnImport) btnImport.disabled = false;
         btn.textContent = '💾 Lưu Danh mục & KPI';
       }
     }
@@ -757,7 +941,7 @@
         const selected = getSelectedItems();
         if (!selected.length) return App.toast('Vui lòng nhập và tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
         syncHeaderInputs();
-        if (format === 'EXCEL') KpiExporter.exportPlanExcel(currentData, selected);
+        if (format === 'EXCEL') KpiExporter.exportPlanExcel(currentData, selected, null, false);
         else KpiExporter.exportPlanWord(currentData, selected);
       } catch (err) {
         console.error('Lỗi xuất Mẫu 1:', err);

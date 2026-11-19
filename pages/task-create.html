@@ -59,6 +59,36 @@
               <label class="form-label">Nội dung chi tiết & Yêu cầu kết quả</label>
               <textarea id="t-desc" class="form-control" rows="4" placeholder="Mô tả nội dung công việc, chỉ tiêu, yêu cầu báo cáo..."></textarea>
             </div>
+<div class="form-grid" style="margin-top:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+          <div class="form-group">
+            <label>Cấp trình</label>
+            <input type="text" id="t-submit-level" placeholder="VD: Đảng ủy, Chỉ huy đơn vị...">
+          </div>
+          <div class="form-group">
+            <label>Độ khó, mới, phức tạp; phạm vi tác động</label>
+            <input type="text" id="t-complexity" placeholder="VD: Phức tạp, phạm vi toàn đơn vị">
+          </div>
+          <div class="form-group">
+            <label>Sản phẩm dự kiến</label>
+            <input type="text" id="t-product" placeholder="VD: Dự thảo Nghị quyết, Kế hoạch...">
+          </div>
+          <div class="form-group">
+            <label>Số lượng kế hoạch</label>
+            <input type="number" step="0.25" min="0" id="t-plan-qty" value="1">
+          </div>
+          <div class="form-group">
+            <label>Tiến độ hiển thị trên biểu</label>
+            <input type="text" id="t-progress-text" placeholder="VD: Thường xuyên / Trong tháng / Trước 20/11">
+          </div>
+          <div class="form-group">
+            <label>Điểm chấm công việc</label>
+            <input type="number" step="0.5" min="0" id="t-base-score" value="0">
+          </div>
+          <div class="form-group">
+            <label>Hệ số quy đổi</label>
+            <input type="number" step="0.1" min="0.1" id="t-coeff" value="1">
+          </div>
+        </div>
 
             <!-- KHU VỰC PHÂN CÔNG NGƯỜI THỰC HIỆN -->
             <div id="box-assignment" style="display: none; background: var(--slate-100); padding: 16px; border-radius: 8px; margin-bottom: 14px;">
@@ -344,6 +374,13 @@
           const remindArr = t.Remind_Before_Mins || [1440, 120, 30];
           document.getElementById('t-remind-mins').value = remindArr.join(', ');
           document.getElementById('t-notes').value = t.Notes || '';
+document.getElementById('t-submit-level').value = t.Submit_Level || '';
+          document.getElementById('t-complexity').value = t.Complexity_Scope || '';
+          document.getElementById('t-product').value = t.Product_Name || '';
+          document.getElementById('t-plan-qty').value = (t.Plan_Quantity !== '' && t.Plan_Quantity !== undefined) ? t.Plan_Quantity : 1;
+          document.getElementById('t-progress-text').value = t.Progress_Plan_Text || '';
+          document.getElementById('t-base-score').value = t.Task_Base_Score || 0;
+          document.getElementById('t-coeff').value = (t.Conversion_Coeff !== '' && t.Conversion_Coeff !== undefined) ? t.Conversion_Coeff : 1;
 
           // Đánh dấu người phối hợp (Multiple Select)
           const coopIds = members.filter(m => m.Member_Role === 'COOPERATOR').map(m => m.User_ID);
@@ -435,7 +472,14 @@
             dueTime: document.getElementById('t-due-time').value,
             remindBeforeMins: remindMins.length ? remindMins : [1440, 120, 30],
             attachments: savedAttachments,
-            notes: document.getElementById('t-notes').value.trim()
+            notes: document.getElementById('t-notes').value.trim(),
+submitLevel: document.getElementById('t-submit-level').value.trim(),
+            complexityScope: document.getElementById('t-complexity').value.trim(),
+            productName: document.getElementById('t-product').value.trim(),
+            planQuantity: Number(document.getElementById('t-plan-qty').value) || 1,
+            progressPlanText: document.getElementById('t-progress-text').value.trim(),
+            taskBaseScore: Number(document.getElementById('t-base-score').value) || 0,
+            conversionCoeff: Number(document.getElementById('t-coeff').value) || 1
           };
 
           const action = editingTaskId ? 'tasks.update' : 'tasks.create';

@@ -7,7 +7,7 @@ const App = {
   currentUser: null,
   groups: [],
   unreadCount: 0,
-  enabledPages: ['dashboard', 'users', 'profile', 'tasks', 'reports', 'calendar', 'notifications', 'settings'],
+ enabledPages: ['dashboard', 'tasks', 'calendar', 'reports', 'notifications', 'users', 'profile', 'settings', 'kpi'],
 
   getRootPrefix() {
     return window.location.pathname.includes('/pages/') ? '../' : './';
@@ -110,6 +110,7 @@ const App = {
           <a href="${root}pages/tasks.html" data-page="tasks" class="nav-item ${activeKey === 'tasks' ? 'active' : ''}">📋 Quản lý Công việc</a>
           <a href="${root}pages/calendar.html" data-page="calendar" class="nav-item ${activeKey === 'calendar' ? 'active' : ''}">📅 Lịch công việc</a>
           <a href="${root}pages/reports.html" data-page="reports" class="nav-item ${activeKey === 'reports' ? 'active' : ''}">📈 Báo cáo & Đánh giá</a>
+<a href="${root}pages/kpi-monthly.html" data-page="kpi" class="nav-item ${activeKey === 'kpi' ? 'active' : ''}">🏅 Đánh giá KPI</a>
           <a href="${root}pages/notifications.html" data-page="notifications" class="nav-item ${activeKey === 'notifications' ? 'active' : ''}">
             🔔 Thông báo & Zalo ${badgeHtml}
           </a>

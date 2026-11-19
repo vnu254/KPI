@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danh mục Công việc & Đánh giá KPI</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#0f2942">
+  <style>
+    .kpi-grid-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .kpi-grid-table th, .kpi-grid-table td { border: 1px solid #cbd5e1; padding: 5px 4px; vertical-align: middle; }
+    .kpi-grid-table th { background: #0f2942; color: #fff; text-align: center; font-weight: 600; }
+    .kpi-grid-table input[type="text"], .kpi-grid-table input[type="number"] {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 12px; font-family: inherit;
+    }
+    .kpi-num { width: 56px !important; text-align: center; }
+    .kpi-calc { background: #f1f5f9; font-weight: 700; text-align: center; color: #0f2942; }
+    .kpi-row-excluded { opacity: 0.45; background: #f8fafc; }
+    .kpi-total-row td { background: #e2e8f0; font-weight: 700; text-align: center; color: #0f172a; }
+    .kpi-pct-row td { background: #dbeafe; font-weight: 700; text-align: center; color: #1d4ed8; }
+    .btn-deduct { display: inline-block; margin-top: 3px; padding: 1px 5px; font-size: 10px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer; }
+    .btn-deduct:hover { background: #fecaca; }
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+    .export-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .summary-panel { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 14px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; gap: 12px; }
+    .period-badge { display: inline-block; padding: 4px 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 12px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main-wrapper">
+      <header class="topbar" id="app-topbar"></header>
+      <main class="content-container">
+
+        <!-- Khối lọc khoảng thời gian & Xuất file -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🏅 Triển khai Danh mục Công việc & Tính điểm KPI Cá nhân</div>
+            <div class="export-group">
+              <button class="btn btn-primary btn-sm" id="btn-save-kpi" onclick="saveAllKpi()">💾 Lưu KPI</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPlan('WORD')">📄 Word Mẫu 1</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPlan('EXCEL')">📊 Excel Mẫu 1</button>
+              <button class="btn btn-success btn-sm" onclick="exportKpi('WORD')">📝 Word Mẫu 2 (KPI)</button>
+              <button class="btn btn-success btn-sm" onclick="exportKpi('EXCEL')">📗 Excel Mẫu 2 (KPI công thức)</button>
+            </div>
+          </div>
+
+          <!-- Bộ lọc thời gian linh hoạt: Theo tháng HOẶC Từ ngày - Đến ngày -->
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px;">
+            <div class="form-group">
+              <label>Kiểu chọn thời gian</label>
+              <select id="f-mode" onchange="toggleFilterMode()">
+                <option value="MONTH">Theo tháng (VD: Tháng 11)</option>
+                <option value="RANGE">Khoảng thời gian (Từ ngày - Đến ngày)</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="wrap-month">
+              <label>Chọn tháng đánh giá</label>
+              <input type="month" id="f-month">
+            </div>
+
+            <div class="form-group" id="wrap-from" style="display:none;">
+              <label>Từ ngày</label>
+              <input type="date" id="f-from-date">
+            </div>
+
+            <div class="form-group" id="wrap-to" style="display:none;">
+              <label>Đến ngày</label>
+              <input type="date" id="f-to-date">
+            </div>
+
+            <div class="form-group">
+              <label>Cán bộ đánh giá</label>
+              <select id="f-user"></select>
+            </div>
+
+            <div class="form-group" style="display:flex; align-items:flex-end;">
+              <button class="btn btn-primary btn-sm" style="width:100%;" onclick="loadMonthlyData()">🔍 Lọc nhiệm vụ</button>
+            </div>
+          </div>
+
+          <!-- Cấu hình tiêu đề quốc hiệu/tiêu ngữ biểu mẫu -->
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+            <div class="form-group">
+              <label>Đảng ủy (Tiêu đề mẫu)</label>
+              <input type="text" id="h-party-committee" placeholder="VD: TRUNG ĐOÀN 176">
+            </div>
+            <div class="form-group">
+              <label>Chi bộ (Tiêu đề mẫu)</label>
+              <input type="text" id="h-party-cell" placeholder="VD: BAN HẬU CẦN - KỸ THUẬT">
+            </div>
+            <div class="form-group">
+              <label>Địa danh (Ngày tháng)</label>
+              <input type="text" id="h-location" value="Quảng Trị">
+            </div>
+            <div class="form-group">
+              <label>Họ tên Bí thư ký Mẫu 1</label>
+              <input type="text" id="h-secretary" placeholder="Họ tên Bí thư Chi bộ">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs Mẫu 1 & Mẫu 2 -->
+        <div class="card" style="margin-top:14px;">
+          <div class="tab-bar">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <button class="btn btn-primary btn-sm" id="tab-btn-plan" onclick="switchKpiTab('PLAN')">1. Danh mục Sản phẩm/Công việc</button>
+              <button class="btn btn-outline btn-sm" id="tab-btn-kpi" onclick="switchKpiTab('KPI')">2. Biểu tính điểm KPI cá nhân (16 cột)</button>
+              <span id="lbl-period-badge" class="period-badge">Đang tải...</span>
+            </div>
+            <small style="color:#64748b;">💡 Bỏ tích ô vuông đầu dòng nếu muốn loại nhiệm vụ đó khỏi đợt đánh giá KPI & file xuất.</small>
+          </div>
+
+          <!-- TAB 1: MẪU DANH MỤC CÔNG VIỆC -->
+          <div id="tab-plan" class="table-responsive">
+            <table class="kpi-grid-table">
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" id="chk-all-plan" checked onchange="toggleSelectAll(this.checked)"></th>
+                  <th>TT</th>
+                  <th style="min-width:180px;">Nhiệm vụ theo kỳ</th>
+                  <th style="min-width:110px;">Cấp trình</th>
+                  <th style="min-width:160px;">Độ khó, mới, phức tạp; phạm vi tác động</th>
+                  <th style="min-width:140px;">Sản phẩm</th>
+                  <th>Số lượng</th>
+                  <th style="min-width:110px;">Tiến độ</th>
+                  <th style="min-width:120px;">Ghi chú</th>
+                  <th>Điểm chấm CV</th>
+                  <th>Hệ số quy đổi</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-plan"></tbody>
+            </table>
+          </div>
+
+          <!-- TAB 2: MẪU KPI 16 CỘT -->
+          <div id="tab-kpi" style="display:none;">
+            <div class="table-responsive">
+              <table class="kpi-grid-table">
+                <thead>
+                  <tr>
+                    <th rowspan="3" style="width:34px;"><input type="checkbox" id="chk-all-kpi" checked onchange="toggleSelectAll(this.checked)"></th>
+                    <th rowspan="3">TT</th>
+                    <th colspan="6">NHIỆM VỤ ĐỀ RA KẾ HOẠCH</th>
+                    <th colspan="9">THỰC TẾ TRIỂN KHAI</th>
+                  </tr>
+                  <tr>
+                    <th rowspan="2" style="min-width:160px;">Nhiệm vụ</th>
+                    <th rowspan="2" style="min-width:120px;">Sản phẩm</th>
+                    <th rowspan="2">SL<br>(4)</th>
+                    <th rowspan="2" style="min-width:95px;">Tiến độ<br>(5)</th>
+                    <th rowspan="2">Hệ số<br>(6)</th>
+                    <th rowspan="2">SL QĐ<br>(7)=(4)*(6)</th>
+                    <th colspan="2">KPI (Số lượng)</th>
+                    <th colspan="2">KPI (Chất lượng)</th>
+                    <th colspan="2">KPI (Tiến độ)</th>
+                    <th colspan="2">KPI LĐ, CĐ, ĐH</th>
+                    <th rowspan="2" style="min-width:160px;">Cá nhân tự đánh giá<br>(16) (-0.25/lỗi)</th>
+                  </tr>
+                  <tr>
+                    <th>TT (8)</th><th>QĐ (9)</th>
+                    <th>TT (10)</th><th>QĐ (11)</th>
+                    <th>TT (12)</th><th>QĐ (13)</th>
+                    <th>TT (14)</th><th>QĐ (15)</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-kpi"></tbody>
+                <tfoot>
+                  <tr class="kpi-total-row">
+                    <td></td><td></td>
+                    <td style="text-align:left;">Tổng</td><td></td>
+                    <td id="t-sum4">0</td><td></td><td></td><td id="t-sum7">0</td>
+                    <td id="t-sum8">0</td><td id="t-sum9">0</td>
+                    <td id="t-sum10">0</td><td id="t-sum11">0</td>
+                    <td id="t-sum12">0</td><td id="t-sum13">0</td>
+                    <td id="t-sum14">0</td><td id="t-sum15">0</td>
+                    <td></td>
+                  </tr>
+                  <tr class="kpi-pct-row">
+                    <td></td><td></td>
+                    <td style="text-align:left;">Tổng %</td>
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                    <td id="t-pctA">0%</td><td></td>
+                    <td id="t-pctB">0%</td><td></td>
+                    <td id="t-pctC">0%</td><td></td>
+                    <td id="t-pctD">0%</td><td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div class="summary-panel">
+              <div class="summary-row"><span>- A = Tổng KPI số lượng thực tế / Tổng KPI số lượng quy đổi × 100%.</span><strong id="val-A">0 %</strong></div>
+              <div class="summary-row"><span>- B = Tổng KPI chất lượng thực tế / Tổng KPI chất lượng quy đổi × 100%.</span><strong id="val-B">0 %</strong></div>
+              <div class="summary-row"><span>- C = Tổng KPI tiến độ thực tế / Tổng KPI tiến độ quy đổi × 100%.</span><strong id="val-C">0 %</strong></div>
+              <div class="summary-row"><span>- D = Tổng KPI lãnh đạo, chỉ đạo điều hành thực tế / Tổng KPI lãnh đạo, chỉ đạo điều × 100%.</span><strong id="val-D">0 %</strong></div>
+              <div class="summary-row"><span>- KPI kết quả thực hiện nhiệm vụ (%) = (A + B + C + D) / 4.</span><strong id="val-kpi-avg" style="color:#1d4ed8;">0 %</strong></div>
+              <div class="summary-row" style="align-items:center;">
+                <span>- Tiêu chí chung (không quá 30 điểm):</span>
+                <input type="number" id="in-general-score" step="0.5" min="0" max="30" value="30" style="width:90px;text-align:center;font-weight:700;" oninput="recalcTotals()">
+              </div>
+              <div class="summary-row">
+                <span>- Tổng điểm đánh giá = (Tiêu chí chung không quá 30 điểm) + KPI (%) × 70 điểm.</span>
+                <strong id="val-total-final" style="color:#b91c1c; font-size:15px;">0 điểm</strong>
+              </div>
+              <div class="summary-row" style="align-items:center; border-bottom:none;">
+                <strong>- Tự nhận mức xếp loại chất lượng cán bộ:</strong>
+                <select id="in-rating-level" style="width:270px; padding:5px; font-weight:600;">
+                  <option value="Hoàn thành xuất sắc nhiệm vụ">Hoàn thành xuất sắc nhiệm vụ</option>
+                  <option value="Hoàn thành tốt nhiệm vụ">Hoàn thành tốt nhiệm vụ</option>
+                  <option value="Hoàn thành nhiệm vụ">Hoàn thành nhiệm vụ</option>
+                  <option value="Không hoàn thành nhiệm vụ">Không hoàn thành nhiệm vụ</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Thư viện xuất Excel hỗ trợ công thức sống + kẻ khung & Times New Roman -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/kpi-export.js"></script>
+  <script>
+    let currentData = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = await App.initProtectedPage('kpi', 'Đánh giá KPI & Danh mục Công việc');
+      if (!user) return;
+
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const lastDay = String(new Date(yyyy, today.getMonth() + 1, 0).getDate()).padStart(2, '0');
+
+      document.getElementById('f-month').value = `${yyyy}-${mm}`;
+      document.getElementById('f-from-date').value = `${yyyy}-${mm}-01`;
+      document.getElementById('f-to-date').value = `${yyyy}-${mm}-${lastDay}`;
+
+      const selUser = document.getElementById('f-user');
+      if (user.Role === 'USER') {
+        selUser.innerHTML = `<option value="${user.User_ID}">${App.escapeHtml(user.Full_Name)}</option>`;
+        selUser.disabled = true;
+      } else {
+        const uRes = await ApiClient.call('users.list');
+        const users = (uRes.success && uRes.data.users) ? uRes.data.users : [user];
+        selUser.innerHTML = users.map(u => `<option value="${u.User_ID}" ${u.User_ID === user.User_ID ? 'selected' : ''}>${App.escapeHtml(u.Full_Name)} (${App.escapeHtml(u.Position || u.Role)})</option>`).join('');
+      }
+      await loadMonthlyData();
+    });
+
+    function toggleFilterMode() {
+      const mode = document.getElementById('f-mode').value;
+      document.getElementById('wrap-month').style.display = mode === 'MONTH' ? 'block' : 'none';
+      document.getElementById('wrap-from').style.display = mode === 'RANGE' ? 'block' : 'none';
+      document.getElementById('wrap-to').style.display = mode === 'RANGE' ? 'block' : 'none';
+    }
+
+    function switchKpiTab(tab) {
+      document.getElementById('tab-plan').style.display = tab === 'PLAN' ? 'block' : 'none';
+      document.getElementById('tab-kpi').style.display = tab === 'KPI' ? 'block' : 'none';
+      document.getElementById('tab-btn-plan').className = tab === 'PLAN' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+      document.getElementById('tab-btn-kpi').className = tab === 'KPI' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+      if (tab === 'KPI') renderKpiTable(); else renderPlanTable();
+    }
+
+    async function loadMonthlyData() {
+      const filterMode = document.getElementById('f-mode').value;
+      const payload = {
+        userId: document.getElementById('f-user').value,
+        filterMode: filterMode,
+        periodMonth: document.getElementById('f-month').value,
+        fromDate: document.getElementById('f-from-date').value,
+        toDate: document.getElementById('f-to-date').value
+      };
+
+      const res = await ApiClient.call('kpi.getMonthlySheet', payload);
+      if (!res.success) return App.toast(res.message, 'error');
+
+      currentData = res.data;
+      // Mặc định tích chọn tất cả các nhiệm vụ lọc được
+      (currentData.items || []).forEach(it => { it._selected = true; });
+
+      document.getElementById('lbl-period-badge').textContent = `Kỳ đánh giá: ${currentData.periodLabel} (${currentData.items.length} nhiệm vụ)`;
+
+      const s = currentData.summary || {};
+      document.getElementById('h-party-committee').value = s.Party_Committee || '';
+      document.getElementById('h-party-cell').value = s.Party_Cell || '';
+      document.getElementById('h-location').value = s.Location_Name || 'Quảng Trị';
+      document.getElementById('h-secretary').value = s.Secretary_Name || '';
+      document.getElementById('in-general-score').value = (s.General_Score !== undefined && s.General_Score !== '') ? s.General_Score : 30;
+      if (s.Self_Rating_Level) document.getElementById('in-rating-level').value = s.Self_Rating_Level;
+
+      renderPlanTable();
+      renderKpiTable();
+    }
+
+    function fmtN(v) {
+      const n = Number(v) || 0;
+      return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
+    }
+
+    function getSelectedItems() {
+      return (currentData && currentData.items ? currentData.items : []).filter(it => it._selected !== false);
+    }
+
+    function toggleSelectAll(checked) {
+      if (!currentData || !currentData.items) return;
+      currentData.items.forEach(it => { it._selected = checked; });
+      document.getElementById('chk-all-plan').checked = checked;
+      document.getElementById('chk-all-kpi').checked = checked;
+      renderPlanTable();
+      renderKpiTable();
+    }
+
+    function toggleItemSelected(idx, checked) {
+      if (!currentData || !currentData.items[idx]) return;
+      currentData.items[idx]._selected = checked;
+      const allChecked = currentData.items.every(it => it._selected !== false);
+      document.getElementById('chk-all-plan').checked = allChecked;
+      document.getElementById('chk-all-kpi').checked = allChecked;
+      renderPlanTable();
+      renderKpiTable();
+    }
+
+    function updateItemField(idx, field, val) {
+      if (!currentData || !currentData.items[idx]) return;
+      currentData.items[idx][field] = val;
+      if (['Plan_Quantity', 'Conversion_Coeff', 'Kpi_Qty_Actual', 'Kpi_Qual_Actual', 'Kpi_Time_Actual', 'Kpi_Lead_Actual'].includes(field)) {
+        recalcRowAndTotals(idx);
+      }
+    }
+
+    function deductError(idx, field, label) {
+      const it = currentData.items[idx];
+      if (!it) return;
+      const cur = Number(it[field]) || 0;
+      it[field] = Math.max(0, Number((cur - 0.25).toFixed(2)));
+      it.Error_Count = (Number(it.Error_Count) || 0) + 1;
+      const tag = `Trừ 0.25 (${label})`;
+      it.Self_Evaluation_Note = it.Self_Evaluation_Note ? `${it.Self_Evaluation_Note}; ${tag}` : tag;
+      renderKpiTable();
+    }
+
+    function renderPlanTable() {
+      const tbody = document.getElementById('tbody-plan');
+      if (!currentData || !currentData.items.length) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:18px;">Không tìm thấy nhiệm vụ nào trong khoảng thời gian đã chọn.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = currentData.items.map((it, i) => `
+        <tr class="${it._selected === false ? 'kpi-row-excluded' : ''}">
+          <td style="text-align:center;"><input type="checkbox" ${it._selected !== false ? 'checked' : ''} onchange="toggleItemSelected(${i}, this.checked)"></td>
+          <td style="text-align:center;">${i + 1}</td>
+          <td><strong>${App.escapeHtml(it.Title)}</strong><br><small style="color:#64748b;">Hạn: ${App.escapeHtml(it.Due_Date || '—')}</small></td>
+          <td><input type="text" value="${App.escapeHtml(it.Submit_Level)}" oninput="updateItemField(${i},'Submit_Level',this.value)"></td>
+          <td><input type="text" value="${App.escapeHtml(it.Complexity_Scope)}" oninput="updateItemField(${i},'Complexity_Scope',this.value)"></td>
+          <td><input type="text" value="${App.escapeHtml(it.Product_Name)}" oninput="updateItemField(${i},'Product_Name',this.value)"></td>
+          <td><input type="number" step="0.25" class="kpi-num" value="${it.Plan_Quantity}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
+          <td><input type="text" value="${App.escapeHtml(it.Progress_Plan_Text)}" oninput="updateItemField(${i},'Progress_Plan_Text',this.value)"></td>
+          <td><input type="text" value="${App.escapeHtml(it.Notes)}" oninput="updateItemField(${i},'Notes',this.value)"></td>
+          <td><input type="number" step="0.5" class="kpi-num" value="${it.Task_Base_Score}" oninput="updateItemField(${i},'Task_Base_Score',this.value)"></td>
+          <td><input type="number" step="0.1" class="kpi-num" value="${it.Conversion_Coeff}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderKpiTable() {
+      const tbody = document.getElementById('tbody-kpi');
+      if (!currentData || !currentData.items.length) {
+        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:18px;">Không tìm thấy nhiệm vụ nào trong khoảng thời gian đã chọn.</td></tr>';
+        recalcTotals();
+        return;
+      }
+      tbody.innerHTML = currentData.items.map((it, i) => {
+        const c4 = Number(it.Plan_Quantity) || 0, c6 = Number(it.Conversion_Coeff) || 1;
+        return `
+          <tr class="${it._selected === false ? 'kpi-row-excluded' : ''}">
+            <td style="text-align:center;"><input type="checkbox" ${it._selected !== false ? 'checked' : ''} onchange="toggleItemSelected(${i}, this.checked)"></td>
+            <td style="text-align:center;">${i + 1}</td>
+            <td>${App.escapeHtml(it.Title)}</td>
+            <td>${App.escapeHtml(it.Product_Name)}</td>
+            <td><input type="number" step="0.25" class="kpi-num" value="${c4}" oninput="updateItemField(${i},'Plan_Quantity',this.value)"></td>
+            <td style="text-align:center;">${App.escapeHtml(it.Progress_Plan_Text)}</td>
+            <td><input type="number" step="0.1" class="kpi-num" value="${c6}" oninput="updateItemField(${i},'Conversion_Coeff',this.value)"></td>
+            <td class="kpi-calc" id="c7-${i}">${fmtN(c4 * c6)}</td>
+
+            <td style="text-align:center;">
+              <input type="number" step="0.25" class="kpi-num" value="${it.Kpi_Qty_Actual}" oninput="updateItemField(${i},'Kpi_Qty_Actual',this.value)">
+              <button type="button" class="btn-deduct" onclick="deductError(${i},'Kpi_Qty_Actual','SL')">-0.25</button>
+            </td>
+            <td class="kpi-calc" id="c9-${i}">${fmtN((Number(it.Kpi_Qty_Actual) || 0) * c6)}</td>
+
+            <td style="text-align:center;">
+              <input type="number" step="0.25" class="kpi-num" value="${it.Kpi_Qual_Actual}" oninput="updateItemField(${i},'Kpi_Qual_Actual',this.value)">
+              <button type="button" class="btn-deduct" onclick="deductError(${i},'Kpi_Qual_Actual','CL')">-0.25</button>
+            </td>
+            <td class="kpi-calc" id="c11-${i}">${fmtN((Number(it.Kpi_Qual_Actual) || 0) * c6)}</td>
+
+            <td style="text-align:center;">
+              <input type="number" step="0.25" class="kpi-num" value="${it.Kpi_Time_Actual}" oninput="updateItemField(${i},'Kpi_Time_Actual',this.value)">
+              <button type="button" class="btn-deduct" onclick="deductError(${i},'Kpi_Time_Actual','TĐ')">-0.25</button>
+            </td>
+            <td class="kpi-calc" id="c13-${i}">${fmtN((Number(it.Kpi_Time_Actual) || 0) * c6)}</td>
+
+            <td style="text-align:center;">
+              <input type="number" step="0.25" class="kpi-num" value="${it.Kpi_Lead_Actual}" oninput="updateItemField(${i},'Kpi_Lead_Actual',this.value)">
+              <button type="button" class="btn-deduct" onclick="deductError(${i},'Kpi_Lead_Actual','LĐ')">-0.25</button>
+            </td>
+            <td class="kpi-calc" id="c15-${i}">${fmtN((Number(it.Kpi_Lead_Actual) || 0) * c6)}</td>
+
+            <td><input type="text" value="${App.escapeHtml(it.Self_Evaluation_Note)}" placeholder="Ghi chú tự đánh giá..." oninput="updateItemField(${i},'Self_Evaluation_Note',this.value)"></td>
+          </tr>
+        `;
+      }).join('');
+      recalcTotals();
+    }
+
+    function recalcRowAndTotals(i) {
+      const it = currentData.items[i];
+      const c4 = Number(it.Plan_Quantity) || 0, c6 = Number(it.Conversion_Coeff) || 1;
+      const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = fmtN(v); };
+      setTxt(`c7-${i}`, c4 * c6);
+      setTxt(`c9-${i}`, (Number(it.Kpi_Qty_Actual) || 0) * c6);
+      setTxt(`c11-${i}`, (Number(it.Kpi_Qual_Actual) || 0) * c6);
+      setTxt(`c13-${i}`, (Number(it.Kpi_Time_Actual) || 0) * c6);
+      setTxt(`c15-${i}`, (Number(it.Kpi_Lead_Actual) || 0) * c6);
+      recalcTotals();
+    }
+
+    function computeKpiSummary() {
+      let sum4 = 0, sum7 = 0, sum8 = 0, sum9 = 0, sum10 = 0, sum11 = 0, sum12 = 0, sum13 = 0, sum14 = 0, sum15 = 0;
+      getSelectedItems().forEach(it => {
+        const c4 = Number(it.Plan_Quantity) || 0, c6 = Number(it.Conversion_Coeff) || 1;
+        const c8 = Number(it.Kpi_Qty_Actual) || 0, c10 = Number(it.Kpi_Qual_Actual) || 0;
+        const c12 = Number(it.Kpi_Time_Actual) || 0, c14 = Number(it.Kpi_Lead_Actual) || 0;
+        sum4 += c4; sum7 += c4 * c6;
+        sum8 += c8; sum9 += c8 * c6;
+        sum10 += c10; sum11 += c10 * c6;
+        sum12 += c12; sum13 += c12 * c6;
+        sum14 += c14; sum15 += c14 * c6;
+      });
+      const pct = (n, d) => d > 0 ? Number(((n / d) * 100).toFixed(2)) : 0;
+      const A = pct(sum9, sum7), B = pct(sum11, sum7), C = pct(sum13, sum7), D = pct(sum15, sum7);
+      const kpiAvg = Number(((A + B + C + D) / 4).toFixed(2));
+      const generalScore = Math.max(0, Math.min(30, Number(document.getElementById('in-general-score').value) || 0));
+      const totalFinal = Number((generalScore + (kpiAvg / 100) * 70).toFixed(2));
+      const ratingLevel = document.getElementById('in-rating-level').value;
+      return { sum4, sum7, sum8, sum9, sum10, sum11, sum12, sum13, sum14, sum15, A, B, C, D, kpiAvg, generalScore, totalFinal, ratingLevel };
+    }
+
+    function recalcTotals() {
+      const c = computeKpiSummary();
+      const setT = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      setT('t-sum4', fmtN(c.sum4)); setT('t-sum7', fmtN(c.sum7));
+      setT('t-sum8', fmtN(c.sum8)); setT('t-sum9', fmtN(c.sum9));
+      setT('t-sum10', fmtN(c.sum10)); setT('t-sum11', fmtN(c.sum11));
+      setT('t-sum12', fmtN(c.sum12)); setT('t-sum13', fmtN(c.sum13));
+      setT('t-sum14', fmtN(c.sum14)); setT('t-sum15', fmtN(c.sum15));
+      setT('t-pctA', c.A + '%'); setT('t-pctB', c.B + '%'); setT('t-pctC', c.C + '%'); setT('t-pctD', c.D + '%');
+      setT('val-A', c.A + ' %'); setT('val-B', c.B + ' %');
+      setT('val-C', c.C + ' %'); setT('val-D', c.D + ' %');
+      setT('val-kpi-avg', c.kpiAvg + ' %');
+      setT('val-total-final', c.totalFinal + ' điểm');
+    }
+
+    function syncHeaderInputs() {
+      if (!currentData) return;
+      currentData.summary.Party_Committee = document.getElementById('h-party-committee').value.trim();
+      currentData.summary.Party_Cell = document.getElementById('h-party-cell').value.trim();
+      currentData.summary.Location_Name = document.getElementById('h-location').value.trim();
+      currentData.summary.Secretary_Name = document.getElementById('h-secretary').value.trim();
+      currentData.summary.General_Score = Math.max(0, Math.min(30, Number(document.getElementById('in-general-score').value) || 0));
+      currentData.summary.Self_Rating_Level = document.getElementById('in-rating-level').value;
+    }
+
+    async function saveAllKpi() {
+      if (!currentData) return;
+      syncHeaderInputs();
+      const btn = document.getElementById('btn-save-kpi');
+      btn.disabled = true; btn.textContent = 'Đang lưu...';
+      try {
+        const res = await ApiClient.call('kpi.saveMonthlyEvaluation', {
+          userId: currentData.user.User_ID,
+          filterMode: currentData.filterMode,
+          periodMonth: currentData.periodMonth,
+          fromDate: currentData.fromDate,
+          toDate: currentData.toDate,
+          items: currentData.items,
+          summary: currentData.summary
+        });
+        if (res.success) {
+          const prevSel = {};
+          currentData.items.forEach(it => { prevSel[it.Task_ID] = it._selected; });
+          currentData = res.data;
+          currentData.items.forEach(it => { it._selected = prevSel[it.Task_ID] !== false; });
+          App.toast('Đã lưu bảng danh mục và kết quả KPI.');
+          renderPlanTable();
+          renderKpiTable();
+        } else {
+          App.toast(res.message, 'error');
+        }
+      } finally {
+        btn.disabled = false; btn.textContent = '💾 Lưu KPI';
+      }
+    }
+
+    function exportPlan(format) {
+      if (!currentData) return;
+      const selected = getSelectedItems();
+      if (!selected.length) return App.toast('Vui lòng tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
+      syncHeaderInputs();
+      if (format === 'EXCEL') KpiExporter.exportPlanExcel(currentData, selected);
+      else KpiExporter.exportPlanWord(currentData, selected);
+    }
+
+    function exportKpi(format) {
+      if (!currentData) return;
+      const selected = getSelectedItems();
+      if (!selected.length) return App.toast('Vui lòng tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
+      syncHeaderInputs();
+      const calc = computeKpiSummary();
+      if (format === 'EXCEL') KpiExporter.exportKpiExcel(currentData, selected, calc);
+      else KpiExporter.exportKpiWord(currentData, selected, calc);
+    }
+  </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 /**
  * TỆP: assets/js/settings.js
- * CHỨC NĂNG: Quản trị Cài đặt hệ thống (SETTINGS), Cấu hình bảo mật Zalo Bot (Script Properties),
- *            Quản lý Triggers tự động, Sao lưu CSDL sang Google Drive và Tra cứu Nhật ký (AUDIT_LOG).
+ * CHỨC NĂNG: Quản trị Cài đặt hệ thống (SETTINGS), Cấu hình bảo mật Zalo Bot & Google Calendar,
+ *            Quản lý Triggers tự động, Công tắc & Xoay vòng Sao lưu CSDL và Tra cứu Nhật ký (AUDIT_LOG).
  */
 
 const SettingsController = {
@@ -72,7 +72,7 @@ const SettingsController = {
     const trig = res.data.triggersStatus || {};
     const quota = res.data.gmailQuota || {};
 
-    // Điền Tab 1: Cài đặt chung & Nhắc việc
+    // Tab 1: Cài đặt chung & Nhắc việc
     document.getElementById('set-unit-name').value = s['UNIT_NAME'] || 'ĐƠN VỊ QUẢN LÝ CÔNG VIỆC NỘI BỘ';
     document.getElementById('set-session-hours').value = s['SESSION_TIMEOUT_HOURS'] || '24';
     document.getElementById('set-enable-zalo').checked = String(s['ENABLE_ZALO_BOT']).toLowerCase() !== 'false';
@@ -95,12 +95,12 @@ const SettingsController = {
       chk.checked = !disabledTypes.includes(chk.value);
     });
 
-    // Điền Tab 2: Cấu hình Zalo Bot (Script Properties)
+    // Tab 2: Cấu hình Zalo Bot (Script Properties)
     document.getElementById('sec-zalo-url').value = sec.ZALO_BOT_API_URL || 'https://bot-api.zapps.me';
     document.getElementById('sec-zalo-token-masked').textContent = sec.ZALO_BOT_TOKEN_MASKED || '(Chưa cấu hình)';
     document.getElementById('sec-spreadsheet-id').textContent = sec.SPREADSHEET_ID || '';
 
-    // Điền Tab 3: Calendar, Gmail & Triggers
+    // Tab 3: Calendar, Gmail, Triggers & Công tắc Sao lưu / Xoay vòng
     document.getElementById('sec-trigger-15m').innerHTML = trig.has15MinScanner
       ? '<span class="status-badge status-ACTIVE">✅ Đang chạy (15 phút/lần)</span>'
       : '<span class="status-badge status-LOCKED">⚠️ Chưa kích hoạt</span>';
@@ -108,6 +108,21 @@ const SettingsController = {
       ? '<span class="status-badge status-ACTIVE">✅ Đang chạy (00:15 hằng ngày)</span>'
       : '<span class="status-badge status-LOCKED">⚠️ Chưa kích hoạt</span>';
     document.getElementById('sec-gmail-quota').textContent = `${quota.remainingQuota !== undefined ? quota.remainingQuota : '--'} email còn lại trong ngày`;
+
+    const retInput = document.getElementById('set-backup-retention');
+    if (retInput) {
+      retInput.value = (s['BACKUP_RETENTION_DAYS'] !== undefined && s['BACKUP_RETENTION_DAYS'] !== '') ? s['BACKUP_RETENTION_DAYS'] : '7';
+    }
+
+    const calInput = document.getElementById('sec-calendar-id');
+    if (calInput) {
+      calInput.value = sec.GOOGLE_CALENDAR_ID || sec.googleCalendarId || '';
+    }
+
+    window.isAutoBackupEnabled = (s['ENABLE_DAILY_BACKUP'] === undefined || String(s['ENABLE_DAILY_BACKUP']).trim().toLowerCase() !== 'false');
+    if (typeof window.renderAutoBackupToggleUI === 'function') {
+      window.renderAutoBackupToggleUI();
+    }
   },
 
   async loadAuditLogs() {

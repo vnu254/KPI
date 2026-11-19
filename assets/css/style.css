@@ -1,7 +1,7 @@
 /**
  * TỆP: assets/css/style.css
  * PHONG CÁCH: Hiện đại, chuyên nghiệp - Tông màu Xanh Navy (#0f2942), Xanh Dương (#1d4ed8) & Trắng
- * TỐI ƯU: Máy tính, Tablet & Điện thoại (Android + iPhone - Cầm dọc & Xoay ngang)
+ * TỐI ƯU: Máy tính, Tablet & Điện thoại (Android + iPhone - Cầm dọc & Xoay ngang + Card View)
  */
 
 :root {
@@ -49,7 +49,6 @@ body {
   font-size: 14px;
 }
 
-/* Chống nháy xanh khi chạm & tắt độ trễ double-tap trên iOS/Android */
 button, a, input, select, textarea {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -243,6 +242,7 @@ button, a, input, select, textarea {
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .role-SUPER_ADMIN { background: #dbeafe; color: #1e40af; }
@@ -255,6 +255,7 @@ button, a, input, select, textarea {
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .status-ACTIVE { background: var(--success-bg); color: var(--success); }
@@ -463,6 +464,58 @@ button, a, input, select, textarea {
   background: var(--blue-50);
 }
 
+/* ==================== HIỂN THỊ Ô TÊN NHIỆM VỤ GỘP MÃ & PHÂN LOẠI (CHUẨN UI) ==================== */
+.data-table .task-col-main {
+  min-width: 260px;
+  white-space: normal !important;
+  line-height: 1.4;
+}
+
+.task-title-main {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--slate-900);
+  text-decoration: none;
+  margin-bottom: 5px;
+  word-break: break-word;
+}
+
+.task-title-main:hover {
+  color: var(--blue-600);
+  text-decoration: underline;
+}
+
+.task-sub-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--slate-500);
+}
+
+.task-code-tag {
+  color: var(--blue-600);
+  font-weight: 600;
+  font-size: 11.5px;
+  text-decoration: none;
+  background: var(--slate-100);
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+.task-code-tag:hover {
+  background: var(--blue-100);
+}
+
+.task-sub-meta span,
+.task-sub-meta .role-badge,
+.task-sub-meta .status-badge {
+  white-space: nowrap;
+}
+
 /* ==================== MÀN HÌNH ĐĂNG NHẬP ==================== */
 .auth-page {
   min-height: 100dvh;
@@ -552,7 +605,7 @@ button, a, input, select, textarea {
 .toast.success { border-left: 5px solid #22c55e; }
 .toast.error { border-left: 5px solid #ef4444; }
 
-/* ==================== MÀN CHE TỐI & THANH ĐÁY DI ĐỘNG (MẶC ĐỊNH ẨN TRÊN PC) ==================== */
+/* ==================== MÀN CHE TỐI, THANH ĐÁY & THẺ GỌN DI ĐỘNG ==================== */
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -568,7 +621,8 @@ button, a, input, select, textarea {
   opacity: 1;
 }
 
-#mob-bottom-nav {
+#mob-bottom-nav,
+.mobile-task-cards {
   display: none;
 }
 
@@ -579,7 +633,6 @@ button, a, input, select, textarea {
   }
 }
 
-/* Kích hoạt chế độ ngăn kéo cho cả điện thoại Dọc (<=960px) lẫn điện thoại Ngang màn hình rộng (max-height <=520px) */
 @media (max-width: 960px), (max-height: 520px) and (orientation: landscape) {
   .sidebar {
     transform: translateX(-105%);
@@ -621,7 +674,7 @@ button, a, input, select, textarea {
     margin-bottom: 12px;
   }
 
-  /* Chống iPhone Safari tự zoom khi bấm vào ô nhập liệu (bắt buộc >= 16px) */
+  /* Chống iPhone Safari tự zoom khi bấm vào ô nhập liệu */
   .form-control,
   .form-group input[type="text"],
   .form-group input[type="email"],
@@ -636,7 +689,6 @@ button, a, input, select, textarea {
     min-height: 40px;
   }
 
-  /* Thanh nút hành động/xuất file vuốt ngang mượt trên điện thoại */
   .export-group {
     width: 100%;
     overflow-x: auto;
@@ -648,7 +700,6 @@ button, a, input, select, textarea {
     flex-shrink: 0;
   }
 
-  /* Bảng dữ liệu vuốt ngang mượt & Ghim cố định cột Tên nhiệm vụ trong bảng KPI */
   .table-responsive {
     border: 1px solid var(--slate-200);
     border-radius: 8px;
@@ -669,11 +720,13 @@ button, a, input, select, textarea {
   .kpi-grid-table tbody tr.kpi-row-new td:nth-child(3) {
     background: #f0fdf4;
   }
+  .kpi-grid-table tbody tr.kpi-row-rec td:nth-child(3) {
+    background: #f5f3ff;
+  }
   .kpi-grid-table tbody tr.kpi-row-excluded td:nth-child(3) {
     background: #f8fafc;
   }
 
-  /* Modal vừa khít màn hình di động (không bị bàn phím che) */
   .modal-backdrop {
     padding: 10px;
   }
@@ -682,7 +735,6 @@ button, a, input, select, textarea {
     padding: 15px;
   }
 
-  /* Thanh điều hướng 1 tay cố định dưới đáy (Bottom Navigation Bar) */
   #mob-bottom-nav {
     display: flex;
     position: fixed;
@@ -774,7 +826,81 @@ button, a, input, select, textarea {
   }
 }
 
-/* Màn hình điện thoại XOAY NGANG (chiều cao nhỏ <= 520px): ẩn thanh đáy, thu gọn tối đa thanh tiêu đề để xem trọn bảng KPI */
+/* GIAO DIỆN THẺ GỌN (CARD VIEW) CHO DANH SÁCH CÔNG VIỆC KHI CẦM ĐIỆN THOẠI DỌC */
+@media (max-width: 640px) and (orientation: portrait) {
+  .desktop-tasks-table-wrap {
+    display: none !important;
+  }
+  .mobile-task-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .mob-task-card {
+    background: #ffffff;
+    border: 1px solid var(--slate-200);
+    border-left: 4px solid var(--blue-500);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 2px 6px rgba(15, 41, 66, 0.06);
+  }
+  .mob-task-card.prio-URGENT,
+  .mob-task-card.st-OVERDUE {
+    border-left-color: #b91c1c;
+  }
+  .mob-task-card.prio-HIGH {
+    border-left-color: #ea580c;
+  }
+  .mob-task-card.st-COMPLETED {
+    border-left-color: #15803d;
+  }
+  .mob-task-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    font-size: 11.5px;
+    color: var(--slate-500);
+  }
+  .mob-task-title {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    text-decoration: none;
+    line-height: 1.38;
+    margin-bottom: 8px;
+    word-break: break-word;
+  }
+  .mob-task-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .mob-task-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--slate-700);
+    margin-bottom: 8px;
+  }
+  .mob-task-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px dashed var(--slate-200);
+  }
+  .mob-task-actions .btn {
+    flex: 1;
+    min-width: 90px;
+  }
+}
+
+/* Màn hình điện thoại XOAY NGANG (chiều cao <= 520px) */
 @media (max-height: 520px) and (orientation: landscape) {
   #mob-bottom-nav {
     display: none !important;

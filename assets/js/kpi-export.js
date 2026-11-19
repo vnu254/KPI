@@ -4,6 +4,7 @@
  *  1. Xuất tệp Word (.doc) khổ A4 ngang và Excel (.xlsx) công thức sống cho Mẫu 1 (10 cột) & Mẫu 2 (16 cột).
  *  2. Tải tệp Excel mẫu nhập liệu (10 cột chuẩn + 2 cột tùy chọn: Lặp lại & Lặp đến ngày).
  *  3. Đọc & phân tích tệp Excel tải lên để nạp hàng loạt cả nhiệm vụ thường và nhiệm vụ lặp định kỳ.
+ *  4. Xuất tệp Excel Tổng hợp KPI Toàn đơn vị (có công thức trung bình sống).
  */
 
 const KpiExporter = {
@@ -836,7 +837,6 @@ const KpiExporter = {
               defaultDates.toDate || ''
             );
 
-            // Chỉ tự gắn lặp khi file Excel có Cột 11 ("Lặp lại"); nếu là file 10 cột cũ thì để "Không lặp" để người dùng chủ động chọn từng dòng trên bảng
             const freqType = (colMap.repeatType !== -1)
               ? this._parseRepeatType(row[colMap.repeatType])
               : 'NONE';
@@ -887,5 +887,123 @@ const KpiExporter = {
       };
       reader.readAsArrayBuffer(file);
     });
+  },
+
+  /* =========================================================================
+   * PHẦN 4: XUẤT FILE EXCEL TỔNG HỢP KPI TOÀN ĐƠN VỊ (13 CỘT + CÔNG THỨC AVERAGE)
+   * ========================================================================= */
+  exportUnitKpiExcel(unitData, headerMeta = {}) {
+    if (typeof XLSX === 'undefined') {
+      throw new Error('Chưa tải được thư viện xuất Excel. Vui lòng kiểm tra kết nối mạng.');
+    }
+
+    const rows = (unitData && unitData.rows) ? unitData.rows : [];
+    const label = (unitData && unitData.periodLabel) ? unitData.periodLabel : 'THÁNG';
+    const now = new Date();
+    const ws = {};
+    const merges = [];
+    const fontBase = { name: 'Times New Roman', sz: 11 };
+    const border = this._borderThin();
+    const lastCol = 12;
+
+    this._setCell(ws, 0, 0, { t: 's', v: `ĐẢNG ỦY ${headerMeta.Party_Committee || '.....................'}`, s: { font: { ...fontBase, sz: 12 }, alignment: { horizontal: 'center' } } });
+    this._setCell(ws, 0, 6, { t: 's', v: 'ĐẢNG CỘNG SẢN VIỆT NAM', s: { font: { ...fontBase, sz: 12, bold: true, underline: true }, alignment: { horizontal: 'center' } } });
+    this._setCell(ws, 1, 0, { t: 's', v: `CHI BỘ ${headerMeta.Party_Cell || '...............'}`, s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
+    this._setCell(ws, 1, 6, { t: 's', v: `${headerMeta.Location_Name || 'Quảng Trị'}, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`, s: { font: { ...fontBase, sz: 12, italic: true }, alignment: { horizontal: 'center' } } });
+    this._setCell(ws, 3, 0, { t: 's', v: `BẢNG TỔNG HỢP KẾT QUẢ ĐÁNH GIÁ HIỆU QUẢ CÔNG VIỆC (KPI) TOÀN ĐƠN VỊ ${label}`, s: { font: { ...fontBase, sz: 13, bold: true }, alignment: { horizontal: 'center' } } });
+
+    merges.push(
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, { s: { r: 0, c: 6 }, e: { r: 0, c: lastCol } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }, { s: { r: 1, c: 6 }, e: { r: 1, c: lastCol } },
+      { s: { r: 3, c: 0 }, e: { r: 3, c: lastCol } }
+    );
+
+    const headers = [
+      'TT', 'Họ và tên', 'Chức vụ', 'Bộ phận / Đơn vị', 'Việc HT / Tổng',
+      'A (%)\nSố lượng', 'B (%)\nChất lượng', 'C (%)\nTiến độ', 'D (%)\nLĐ, CĐ, ĐH',
+      'KPI TB (%)', 'Tiêu chí chung', 'Tổng điểm', 'Mức xếp loại'
+    ];
+    headers.forEach((h, c) => {
+      this._setCell(ws, 5, c, {
+        t: 's', v: h,
+        s: { font: { ...fontBase, bold: true }, fill: { fgColor: { rgb: 'E2E8F0' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border }
+      });
+    });
+
+    const tdCenter = { font: fontBase, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border };
+    const tdLeft = { font: fontBase, alignment: { horizontal: 'left', vertical: 'center', wrapText: true }, border };
+    const tdScoreBold = { font: { ...fontBase, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+
+    const list = rows.length ? rows : [{}];
+    const firstRowNum = 7;
+
+    list.forEach((r, idx) => {
+      const rIdx = 6 + idx;
+      const hasKpi = Boolean(r.Has_Kpi_Record);
+      const numOrBlank = (val, styleObj) => hasKpi
+        ? { t: 'n', v: Number(val) || 0, z: '0.##', s: styleObj }
+        : { t: 's', v: '', s: styleObj };
+
+      this._setCell(ws, rIdx, 0, { t: 'n', v: idx + 1, s: tdCenter });
+      this._setCell(ws, rIdx, 1, { t: 's', v: r.Full_Name || '', s: tdLeft });
+      this._setCell(ws, rIdx, 2, { t: 's', v: r.Position || '', s: tdLeft });
+      this._setCell(ws, rIdx, 3, { t: 's', v: r.Group_Name || '', s: tdLeft });
+      this._setCell(ws, rIdx, 4, { t: 's', v: `${r.Completed_Tasks || 0}/${r.Total_Tasks || 0}`, s: tdCenter });
+      this._setCell(ws, rIdx, 5, numOrBlank(r.A_Percent, tdCenter));
+      this._setCell(ws, rIdx, 6, numOrBlank(r.B_Percent, tdCenter));
+      this._setCell(ws, rIdx, 7, numOrBlank(r.C_Percent, tdCenter));
+      this._setCell(ws, rIdx, 8, numOrBlank(r.D_Percent, tdCenter));
+      this._setCell(ws, rIdx, 9, numOrBlank(r.Kpi_Avg_Percent, tdCenter));
+      this._setCell(ws, rIdx, 10, numOrBlank(r.General_Score, tdCenter));
+      this._setCell(ws, rIdx, 11, numOrBlank(r.Total_Final_Score, tdScoreBold));
+      this._setCell(ws, rIdx, 12, { t: 's', v: r.Self_Rating_Level || 'Chưa tự đánh giá', s: tdLeft });
+    });
+
+    const lastRowNum = firstRowNum + list.length - 1;
+    const avgIdx = 6 + list.length;
+    const boldCenter = { font: { ...fontBase, bold: true }, fill: { fgColor: { rgb: 'DBEAFE' } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+
+    const evaluatedCount = rows.filter(x => x.Has_Kpi_Record).length;
+    this._styleRange(ws, avgIdx, 0, avgIdx, lastCol, boldCenter);
+    this._setCell(ws, avgIdx, 1, {
+      t: 's',
+      v: `TRUNG BÌNH CÁN BỘ ĐÃ ĐÁNH GIÁ (${evaluatedCount}/${rows.length})`,
+      s: { ...boldCenter, alignment: { horizontal: 'left', vertical: 'center' } }
+    });
+    merges.push({ s: { r: avgIdx, c: 1 }, e: { r: avgIdx, c: 4 } });
+
+    [
+      { c: 5, ltr: 'F' }, { c: 6, ltr: 'G' }, { c: 7, ltr: 'H' },
+      { c: 8, ltr: 'I' }, { c: 9, ltr: 'J' }, { c: 10, ltr: 'K' }, { c: 11, ltr: 'L' }
+    ].forEach(col => {
+      this._setCell(ws, avgIdx, col.c, {
+        t: 'n',
+        f: `IF(COUNT(${col.ltr}${firstRowNum}:${col.ltr}${lastRowNum})>0,AVERAGE(${col.ltr}${firstRowNum}:${col.ltr}${lastRowNum}),0)`,
+        v: 0,
+        z: '0.00',
+        s: boldCenter
+      });
+    });
+
+    const sigIdx = avgIdx + 2;
+    this._setCell(ws, sigIdx, 8, { t: 's', v: 'T/M CẤP ỦY / CHỈ HUY ĐƠN VỊ', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
+    this._setCell(ws, sigIdx + 4, 8, { t: 's', v: headerMeta.Secretary_Name || '..............................', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
+    merges.push(
+      { s: { r: sigIdx, c: 8 }, e: { r: sigIdx, c: lastCol } },
+      { s: { r: sigIdx + 4, c: 8 }, e: { r: sigIdx + 4, c: lastCol } }
+    );
+
+    ws['!merges'] = merges;
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 22 }, { wch: 18 }, { wch: 20 }, { wch: 12 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 24 }
+    ];
+    ws['!rows'] = [{ hpt: 20 }, { hpt: 20 }, { hpt: 10 }, { hpt: 26 }, { hpt: 10 }, { hpt: 38 }];
+    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sigIdx + 5, c: lastCol } });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'TongHopKPI_DonVi');
+    const pKey = String((unitData && unitData.periodKey) || 'KPI').replace(/[^a-zA-Z0-9_-]/g, '_');
+    this._downloadWorkbook(wb, `Tong_Hop_KPI_Don_Vi_${pKey}.xlsx`);
   }
 };

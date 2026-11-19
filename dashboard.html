@@ -1,17 +1,64 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<link rel="manifest" href="../manifest.json">
-<meta name="theme-color" content="#0f2942">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0f2942">
   <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="QLCV & KPI">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Bảng điều khiển & Thống kê - Hệ thống Quản lý Công việc</title>
-  <link rel="stylesheet" href="./assets/css/style.css">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20261120">
   <!-- Thư viện Chart.js v4 qua CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* Gộp cột Mã NV & Phân loại vào ô Tên công việc cho thoáng và dễ nhìn */
+    .data-table .task-col-main {
+      min-width: 240px;
+      white-space: normal !important;
+      line-height: 1.4;
+    }
+    .task-title-main {
+      display: block;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--slate-900);
+      text-decoration: none;
+      margin-bottom: 5px;
+      word-break: break-word;
+    }
+    .task-title-main:hover {
+      color: var(--blue-600);
+      text-decoration: underline;
+    }
+    .task-sub-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--slate-500);
+    }
+    .task-code-tag {
+      color: var(--blue-600);
+      font-weight: 600;
+      font-size: 11.5px;
+      text-decoration: none;
+      background: var(--slate-100);
+      padding: 2px 7px;
+      border-radius: 5px;
+      white-space: nowrap;
+    }
+    .task-code-tag:hover {
+      background: var(--blue-100);
+    }
+    .task-sub-meta span,
+    .task-sub-meta .role-badge,
+    .task-sub-meta .status-badge {
+      white-space: nowrap;
+    }
+  </style>
 </head>
 <body>
   <div class="app-layout">
@@ -152,9 +199,14 @@
                 <a href="./pages/reports.html" class="btn btn-outline btn-sm">Mở trang Xét duyệt →</a>
               </div>
               <div class="table-responsive">
-                <table class="data-table" style="min-width:480px;">
+                <table class="data-table" style="min-width:460px;">
                   <thead>
-                    <tr><th>Mã NV</th><th>Tên nhiệm vụ</th><th>Cán bộ</th><th>Tiến độ</th><th>Xử lý</th></tr>
+                    <tr>
+                      <th style="width:46%;">Công việc / Nhiệm vụ</th>
+                      <th style="width:20%;">Cán bộ</th>
+                      <th style="width:18%;">Tiến độ</th>
+                      <th style="width:16%;text-align:right;">Xử lý</th>
+                    </tr>
                   </thead>
                   <tbody id="tbody-mg-confirm"></tbody>
                 </table>
@@ -166,9 +218,14 @@
                 <div class="card-title">📢 Nhiệm vụ Cần Nhắc Báo cáo Tiến độ</div>
               </div>
               <div class="table-responsive">
-                <table class="data-table" style="min-width:480px;">
+                <table class="data-table" style="min-width:460px;">
                   <thead>
-                    <tr><th>Mã NV</th><th>Nhiệm vụ & Hạn</th><th>Cán bộ</th><th>Trạng thái</th><th>Đôn đốc</th></tr>
+                    <tr>
+                      <th style="width:46%;">Công việc / Hạn hoàn thành</th>
+                      <th style="width:20%;">Cán bộ</th>
+                      <th style="width:18%;">Trạng thái</th>
+                      <th style="width:16%;text-align:right;">Đôn đốc</th>
+                    </tr>
                   </thead>
                   <tbody id="tbody-mg-remind"></tbody>
                 </table>
@@ -244,7 +301,12 @@
               <div class="table-responsive">
                 <table class="data-table" style="min-width:540px;">
                   <thead>
-                    <tr><th>Mã NV</th><th>Tên công việc</th><th>Phân loại</th><th>Thời hạn</th><th>Tiến độ</th><th>Thao tác</th></tr>
+                    <tr>
+                      <th style="width:48%;">Công việc / Nhiệm vụ</th>
+                      <th style="width:18%;white-space:nowrap;">Thời hạn</th>
+                      <th style="width:18%;min-width:125px;">Tiến độ</th>
+                      <th style="width:16%;white-space:nowrap;text-align:right;">Thao tác</th>
+                    </tr>
                   </thead>
                   <tbody id="tbody-us-tasks"></tbody>
                 </table>
@@ -364,10 +426,10 @@
     </div>
   </div>
 
-  <script src="./assets/js/api.js"></script>
-  <script src="./assets/js/app.js"></script>
-  <script src="./assets/js/tasks.js"></script>
-  <script src="./assets/js/dashboard.js"></script>
+  <script src="./assets/js/api.js?v=20261120"></script>
+  <script src="./assets/js/app.js?v=20261120"></script>
+  <script src="./assets/js/tasks.js?v=20261120"></script>
+  <script src="./assets/js/dashboard.js?v=20261120"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       const user = await App.initProtectedPage('dashboard', 'Bảng điều khiển & Thống kê');

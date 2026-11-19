@@ -1,6 +1,7 @@
 /**
  * TỆP: assets/js/dashboard.js
  * CHỨC NĂNG: Điều khiển hiển thị 3 Dashboard chuyên biệt (SUPER_ADMIN, MANAGER, USER),
+ *            gộp cột Mã NV + Phân loại vào cột Tên công việc gọn gàng,
  *            vẽ 6 Biểu đồ thực tế bằng Chart.js và Xuất 7 loại Báo cáo ra Excel (.xlsx) / PDF (.pdf).
  */
 
@@ -44,7 +45,6 @@ const DashboardController = {
     this.rawData = res.data;
     const role = App.currentUser.Role;
 
-    // Hiển thị các nút chuyển đổi góc nhìn theo phân quyền
     document.getElementById('btn-view-admin').style.display = (role === 'SUPER_ADMIN') ? 'inline-flex' : 'none';
     document.getElementById('btn-view-manager').style.display = (role === 'SUPER_ADMIN' || role === 'MANAGER') ? 'inline-flex' : 'none';
 
@@ -53,7 +53,6 @@ const DashboardController = {
     this.renderUserSection(res.data.user);
     this.renderAllSixCharts(res.data.charts);
 
-    // Mặc định mở đúng góc nhìn theo cấp quyền của tài khoản
     if (role === 'SUPER_ADMIN') {
       this.switchRoleView('SUPER_ADMIN');
     } else if (role === 'MANAGER') {
@@ -114,7 +113,7 @@ const DashboardController = {
   },
 
   /**
-   * 2. RENDER DASHBOARD MANAGER
+   * 2. RENDER DASHBOARD MANAGER (Gộp cột Mã NV vào Tên công việc)
    */
   renderManagerSection(mg) {
     if (!mg) return;
@@ -125,36 +124,54 @@ const DashboardController = {
     document.getElementById('mg-waiting-confirm').textContent = mg.waitingConfirmCount || 0;
     document.getElementById('mg-need-remind').textContent = mg.needRemindCount || 0;
 
-    // Bảng nhiệm vụ cần xác nhận
+    // Bảng nhiệm vụ cần xác nhận (4 cột)
     const tbodyConfirm = document.getElementById('tbody-mg-confirm');
     const confirmList = mg.tasksWaitingConfirmList || [];
     if (confirmList.length === 0) {
-      tbodyConfirm.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#64748b;">Không có nhiệm vụ nào đang chờ xác nhận.</td></tr>';
+      tbodyConfirm.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b;">Không có nhiệm vụ nào đang chờ xác nhận.</td></tr>';
     } else {
       tbodyConfirm.innerHTML = confirmList.map(t => `
         <tr>
-          <td><a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(t.Task_ID)}</a></td>
-          <td><strong>${App.escapeHtml(t.Title)}</strong></td>
-          <td>${App.escapeHtml(t.Primary_Assignee_Name)}</td>
+          <td class="task-col-main">
+            <a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="task-title-main">
+              ${App.escapeHtml(t.Title)}
+            </a>
+            <div class="task-sub-meta">
+              <a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="task-code-tag">${App.escapeHtml(t.Task_ID)}</a>
+              ${t.Task_Category ? TaskUI.renderCategoryBadge(t.Task_Category) : ''}
+            </div>
+          </td>
+          <td><strong>${App.escapeHtml(t.Primary_Assignee_Name)}</strong></td>
           <td>${TaskUI.renderProgressBar(t.Progress)}</td>
-          <td><a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-primary btn-sm">✅ Kiểm tra & Duyệt</a></td>
+          <td style="white-space:nowrap;text-align:right;">
+            <a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-primary btn-sm">✅ Duyệt</a>
+          </td>
         </tr>
       `).join('');
     }
 
-    // Bảng nhiệm vụ cần nhắc báo cáo
+    // Bảng nhiệm vụ cần nhắc báo cáo (4 cột)
     const tbodyRemind = document.getElementById('tbody-mg-remind');
     const remindList = mg.tasksNeedRemindList || [];
     if (remindList.length === 0) {
-      tbodyRemind.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#64748b;">Tất cả nhiệm vụ đang bám sát tiến độ.</td></tr>';
+      tbodyRemind.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b;">Tất cả nhiệm vụ đang bám sát tiến độ.</td></tr>';
     } else {
       tbodyRemind.innerHTML = remindList.map(t => `
         <tr>
-          <td><a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(t.Task_ID)}</a></td>
-          <td><strong>${App.escapeHtml(t.Title)}</strong><br><small style="color:var(--danger);">Hạn: ${TaskUI.formatVnDate(t.Due_Date, t.Due_Time)}</small></td>
-          <td>${App.escapeHtml(t.Primary_Assignee_Name)}</td>
+          <td class="task-col-main">
+            <a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="task-title-main">
+              ${App.escapeHtml(t.Title)}
+            </a>
+            <div class="task-sub-meta">
+              <a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="task-code-tag">${App.escapeHtml(t.Task_ID)}</a>
+              <span style="color:var(--danger);font-weight:600;">Hạn: ${TaskUI.formatVnDate(t.Due_Date, t.Due_Time)}</span>
+            </div>
+          </td>
+          <td><strong>${App.escapeHtml(t.Primary_Assignee_Name)}</strong></td>
           <td>${TaskUI.renderStatusBadge(t.Status)}</td>
-          <td><button class="btn btn-outline btn-sm" onclick="DashboardController.quickRemindZalo('${App.escapeHtml(t.Task_ID)}')">📢 Nhắc Zalo</button></td>
+          <td style="white-space:nowrap;text-align:right;">
+            <button class="btn btn-outline btn-sm" onclick="DashboardController.quickRemindZalo('${App.escapeHtml(t.Task_ID)}')">📢 Nhắc Zalo</button>
+          </td>
         </tr>
       `).join('');
     }
@@ -177,7 +194,7 @@ const DashboardController = {
   },
 
   /**
-   * 3. RENDER DASHBOARD USER
+   * 3. RENDER DASHBOARD USER (Gộp Mã NV & Phân loại vào ô Tên công việc -> 4 cột thoáng rộng)
    */
   renderUserSection(us) {
     if (!us) return;
@@ -192,16 +209,28 @@ const DashboardController = {
     const tbodyMyTasks = document.getElementById('tbody-us-tasks');
     const myTasks = us.myActiveTasksList || [];
     if (myTasks.length === 0) {
-      tbodyMyTasks.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:18px;color:#64748b;">Bạn không có công việc nào đang tồn đọng.</td></tr>';
+      tbodyMyTasks.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:18px;color:#64748b;">Bạn không có công việc nào đang tồn đọng.</td></tr>';
     } else {
       tbodyMyTasks.innerHTML = myTasks.map(t => `
         <tr>
-          <td><a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(t.Task_ID)}</a></td>
-          <td><strong>${App.escapeHtml(t.Title)}</strong></td>
-          <td>${TaskUI.renderCategoryBadge(t.Task_Category)}</td>
-          <td style="white-space:nowrap;">${TaskUI.formatVnDate(t.Due_Date, t.Due_Time)}</td>
+          <td class="task-col-main">
+            <a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="task-title-main">
+              ${App.escapeHtml(t.Title)}
+            </a>
+            <div class="task-sub-meta">
+              <a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="task-code-tag">
+                ${App.escapeHtml(t.Task_ID)}
+              </a>
+              ${TaskUI.renderCategoryBadge(t.Task_Category)}
+            </div>
+          </td>
+          <td style="white-space:nowrap;color:var(--slate-700);font-weight:500;">
+            ${TaskUI.formatVnDate(t.Due_Date, t.Due_Time)}
+          </td>
           <td>${TaskUI.renderProgressBar(t.Progress)}</td>
-          <td><a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-primary btn-sm">Cập nhật / Báo cáo</a></td>
+          <td style="white-space:nowrap;text-align:right;">
+            <a href="./pages/task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-primary btn-sm">Cập nhật / Báo cáo</a>
+          </td>
         </tr>
       `).join('');
     }
@@ -233,7 +262,6 @@ const DashboardController = {
   renderAllSixCharts(charts) {
     if (!charts || typeof Chart === 'undefined') return;
 
-    // Biểu đồ 1: Tỷ lệ hoàn thành (Doughnut)
     this.destroyChart('c1');
     const ctx1 = document.getElementById('chart-completion-rate');
     if (ctx1) {
@@ -250,7 +278,6 @@ const DashboardController = {
       });
     }
 
-    // Biểu đồ 2: Nhiệm vụ theo trạng thái (Bar)
     this.destroyChart('c2');
     const ctx2 = document.getElementById('chart-status-dist');
     if (ctx2) {
@@ -269,7 +296,6 @@ const DashboardController = {
       });
     }
 
-    // Biểu đồ 3: Xu hướng công việc theo thời gian (Line)
     this.destroyChart('c3');
     const ctx3 = document.getElementById('chart-timeline-trend');
     if (ctx3) {
@@ -300,7 +326,6 @@ const DashboardController = {
       });
     }
 
-    // Biểu đồ 4: So sánh tiến độ giữa các nhóm / bộ phận (Grouped Bar)
     this.destroyChart('c4');
     const ctx4 = document.getElementById('chart-group-compare');
     if (ctx4) {
@@ -318,7 +343,6 @@ const DashboardController = {
       });
     }
 
-    // Biểu đồ 5: Thống kê nhiệm vụ quá hạn & đang xử lý theo Cán bộ (Horizontal Bar)
     this.destroyChart('c5');
     const ctx5 = document.getElementById('chart-overdue');
     if (ctx5) {
@@ -335,7 +359,6 @@ const DashboardController = {
       });
     }
 
-    // Biểu đồ 6: Kết quả thực hiện theo tháng trong năm (Combo Bar + Line)
     this.destroyChart('c6');
     const ctx6 = document.getElementById('chart-monthly-perf');
     if (ctx6) {
@@ -405,7 +428,6 @@ const DashboardController = {
       App.toast(res.message);
       const d = res.data;
 
-      // Tự động kích hoạt tải tệp trực tiếp về máy tính / điện thoại từ Base64
       if (d.base64Data) {
         const byteCharacters = atob(d.base64Data);
         const byteNumbers = new Array(byteCharacters.length);

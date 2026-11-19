@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Chi tiết Công việc & Báo cáo Nhiệm vụ</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-4">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261120">
 </head>
 <body>
   <div class="app-layout">
@@ -63,7 +63,6 @@
                 </button>
               </div>
 
-              <!-- Biểu mẫu gửi báo cáo tại chỗ -->
               <form id="box-quick-report" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; padding: 14px; border-radius: 8px; margin-bottom: 16px;">
                 <div style="font-weight:700;color:var(--navy-800);margin-bottom:10px;">📤 Gửi Báo cáo Kết quả Thực hiện</div>
                 <div class="form-grid">
@@ -208,14 +207,88 @@
     </div>
   </div>
 
-  <script src="../assets/js/api.js?v=20261119-4"></script>
-  <script src="../assets/js/app.js?v=20261119-4"></script>
+  <!-- MODAL CHUYỂN GIAO NHIỆM VỤ -->
+  <div class="modal-backdrop" id="modal-transfer">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title">🔄 Chuyển giao Nhiệm vụ cho Cán bộ khác</div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-transfer').classList.remove('open')">✕</button>
+      </div>
+      <form id="form-transfer">
+        <div class="form-group">
+          <label class="form-label">Chọn cán bộ nhận bàn giao *</label>
+          <select id="trf-assignee" class="form-control" required>
+            <option value="">Đang tải danh sách cán bộ...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lý do / Nội dung bàn giao *</label>
+          <textarea id="trf-reason" class="form-control" rows="3" placeholder="Nhập lý do chuyển giao và lưu ý bàn giao..." required></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-transfer').classList.remove('open')">Đóng</button>
+          <button type="submit" id="btn-submit-transfer" class="btn btn-primary">Xác nhận Chuyển giao (Báo Zalo)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL SỬA NHIỆM VỤ ĐỊNH KỲ THEO 3 PHẠM VI -->
+  <div class="modal-backdrop" id="modal-scope-edit">
+    <div class="modal-box">
+      <div class="card-header">
+        <div class="card-title">🔁 Chỉnh sửa Nhiệm vụ Định kỳ theo Phạm vi</div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-scope-edit').classList.remove('open')">✕</button>
+      </div>
+      <form id="form-scope-edit">
+        <div class="form-group">
+          <label class="form-label">Phạm vi áp dụng thay đổi *</label>
+          <select id="se-scope" class="form-control">
+            <option value="THIS_ONLY">Chỉ sửa riêng kỳ nhiệm vụ này</option>
+            <option value="THIS_AND_FOLLOWING">Sửa kỳ này, các kỳ tiếp theo & mẫu chuỗi</option>
+            <option value="ALL_IN_SERIES">Sửa toàn bộ các kỳ chưa hoàn thành trong chuỗi</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên nhiệm vụ / Mẫu chuỗi *</label>
+          <input type="text" id="se-title" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nội dung mô tả</label>
+          <textarea id="se-desc" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Mức độ ưu tiên</label>
+            <select id="se-priority" class="form-control">
+              <option value="LOW">Thấp</option>
+              <option value="MEDIUM">Trung bình</option>
+              <option value="HIGH">Cao</option>
+              <option value="URGENT">Khẩn cấp</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Giờ đến hạn</label>
+            <input type="time" id="se-duetime" class="form-control" value="17:00" required>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-scope-edit').classList.remove('open')">Đóng</button>
+          <button type="submit" id="btn-submit-scope-edit" class="btn btn-primary">Lưu Thay đổi Phạm vi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js?v=20261120"></script>
+  <script src="../assets/js/app.js?v=20261120"></script>
   <script src="../assets/js/tasks.js"></script>
   <script src="../assets/js/reports.js"></script>
   <script>
     let currentUserObj = null;
     let currentTaskId = '';
     let taskDetailObj = null;
+    let cachedTransferUsers = null;
 
     async function loadTaskDetail() {
       const res = await ApiClient.call('tasks.detail', { taskId: currentTaskId });
@@ -262,7 +335,6 @@
         ? '<span style="color:#94a3b8;font-size:13px;">Chưa có tệp đính kèm.</span>'
         : t.Attachments.map(f => `<a href="${App.escapeHtml(f.fileUrl)}" target="_blank" class="btn btn-outline btn-sm">📄 ${App.escapeHtml(f.fileName)}</a>`).join('');
 
-      // Thanh nút thao tác
       const bar = document.getElementById('action-buttons-bar');
       let btnsHtml = '';
       if (t.Status === 'PENDING' && t.Is_Assignee) {
@@ -291,7 +363,6 @@
       }
       bar.innerHTML = btnsHtml;
 
-      // Render Lịch sử Báo cáo Tiến độ của nhiệm vụ
       const repBox = document.getElementById('task-reports-list');
       if (reports.length === 0) {
         repBox.innerHTML = '<p style="color:#94a3b8;font-size:13px;">Chưa có báo cáo kết quả nào được gửi cho nhiệm vụ này.</p>';
@@ -329,7 +400,6 @@
         }).join('');
       }
 
-      // Render Điểm đánh giá (SCORES)
       const scrBox = document.getElementById('scores-list');
       if (scores.length === 0) {
         scrBox.innerHTML = '<p style="color:#94a3b8;font-size:13px;">Chưa có điểm đánh giá.</p>';
@@ -349,7 +419,6 @@
         `).join('');
       }
 
-      // Render Thành viên
       document.getElementById('members-list').innerHTML = members.map(m => `
         <div style="padding: 10px 0; border-bottom: 1px solid var(--slate-100); display:flex; justify-content:space-between; align-items:center;">
           <div>
@@ -361,7 +430,6 @@
         </div>
       `).join('');
 
-      // Render Bình luận
       const cmtBox = document.getElementById('comments-list');
       cmtBox.innerHTML = comments.length === 0
         ? '<p style="color:#94a3b8;font-size:13px;">Chưa có nội dung trao đổi nào.</p>'
@@ -376,7 +444,6 @@
           </div>
         `).join('');
 
-      // Render Lịch sử
       document.getElementById('logs-list').innerHTML = logs.map(l => `
         <div style="padding: 8px 0; border-bottom: 1px dashed var(--slate-200); font-size: 12px;">
           <div style="color:var(--navy-800);font-weight:700;">${App.escapeHtml(l.Actor_Name)} - <span style="color:var(--blue-600);">${App.escapeHtml(l.Action_Type)}</span></div>
@@ -447,6 +514,38 @@
       document.getElementById('ext-date').value = taskDetailObj.Due_Date;
       document.getElementById('ext-time').value = taskDetailObj.Due_Time || '17:00';
       document.getElementById('modal-extend').classList.add('open');
+    };
+
+    window.openTransferModal = async function() {
+      if (!taskDetailObj) return;
+      const sel = document.getElementById('trf-assignee');
+      document.getElementById('trf-reason').value = '';
+      document.getElementById('modal-transfer').classList.add('open');
+
+      if (!cachedTransferUsers) {
+        sel.innerHTML = '<option value="">Đang tải danh sách cán bộ...</option>';
+        const res = await ApiClient.call('users.list');
+        cachedTransferUsers = (res.success && res.data && res.data.users) ? res.data.users : [];
+      }
+
+      const candidates = cachedTransferUsers.filter(u =>
+        String(u.User_ID) !== String(taskDetailObj.Primary_Assignee_ID) && u.Status !== 'LOCKED'
+      );
+      sel.innerHTML = candidates.length
+        ? '<option value="">-- Chọn cán bộ nhận bàn giao --</option>' +
+          candidates.map(u => `<option value="${App.escapeHtml(u.User_ID)}">${App.escapeHtml(u.Full_Name)} (${App.escapeHtml(u.Position || u.Role)})</option>`).join('')
+        : '<option value="">Không có cán bộ phù hợp</option>';
+    };
+
+    window.openScopeEditModal = function() {
+      if (!taskDetailObj) return;
+      const cleanTitle = String(taskDetailObj.Title || '').replace(/\s*\(\d{2}\/\d{2}\/\d{4}\)\s*$/, '').trim();
+      document.getElementById('se-scope').value = 'THIS_AND_FOLLOWING';
+      document.getElementById('se-title').value = cleanTitle || taskDetailObj.Title;
+      document.getElementById('se-desc').value = taskDetailObj.Description || '';
+      document.getElementById('se-priority').value = taskDetailObj.Priority || 'MEDIUM';
+      document.getElementById('se-duetime').value = taskDetailObj.Due_Time || '17:00';
+      document.getElementById('modal-scope-edit').classList.add('open');
     };
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -574,6 +673,58 @@
         if (res.success) {
           document.getElementById('modal-extend').classList.remove('open');
           loadTaskDetail();
+        }
+      });
+
+      document.getElementById('form-transfer').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit-transfer');
+        btn.disabled = true;
+        btn.textContent = 'Đang chuyển giao...';
+        try {
+          const res = await ApiClient.call('tasks.transfer', {
+            taskId: currentTaskId,
+            newAssigneeId: document.getElementById('trf-assignee').value,
+            reason: document.getElementById('trf-reason').value.trim()
+          });
+          App.toast(res.message, res.success ? 'success' : 'error');
+          if (res.success) {
+            document.getElementById('modal-transfer').classList.remove('open');
+            loadTaskDetail();
+          }
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Xác nhận Chuyển giao (Báo Zalo)';
+        }
+      });
+
+      document.getElementById('form-scope-edit').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit-scope-edit');
+        btn.disabled = true;
+        btn.textContent = 'Đang cập nhật...';
+        try {
+          const res = await ApiClient.call('recurring.editScope', {
+            editScope: document.getElementById('se-scope').value,
+            taskId: currentTaskId,
+            recurringId: taskDetailObj.Recurring_ID || '',
+            title: document.getElementById('se-title').value.trim(),
+            description: document.getElementById('se-desc').value.trim(),
+            priority: document.getElementById('se-priority').value,
+            dueTime: document.getElementById('se-duetime').value
+          });
+          App.toast(res.message, res.success ? 'success' : 'error');
+          if (res.success) {
+            document.getElementById('modal-scope-edit').classList.remove('open');
+            loadTaskDetail();
+          }
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Lưu Thay đổi Phạm vi';
         }
       });
     });

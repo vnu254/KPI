@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Quản lý Công việc & Nhiệm vụ Định kỳ</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-4">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261120">
 </head>
 <body>
   <div class="app-layout">
@@ -147,27 +147,30 @@
             <div class="card-header">
               <div class="card-title" id="list-card-title">Danh sách Công việc & Nhiệm vụ hiện hành</div>
             </div>
-            <div class="table-responsive">
+
+            <!-- Bảng hiển thị trên Máy tính / Tablet / Điện thoại xoay ngang (8 cột gộp gọn) -->
+            <div class="table-responsive desktop-tasks-table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Mã NV</th>
-                    <th>Tên công việc / Nhiệm vụ</th>
-                    <th>Phân loại</th>
+                    <th style="width: 32%;">Công việc / Nhiệm vụ</th>
                     <th>Người giao</th>
                     <th>Người thực hiện</th>
-                    <th>Thời hạn</th>
+                    <th style="white-space:nowrap;">Thời hạn</th>
                     <th>Ưu tiên</th>
-                    <th>Tiến độ</th>
+                    <th style="min-width:115px;">Tiến độ</th>
                     <th>Trạng thái</th>
-                    <th>Thao tác</th>
+                    <th style="text-align:right;">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody id="tbody-tasks">
-                  <tr><td colspan="10" style="text-align:center;padding:24px;">Đang tải dữ liệu...</td></tr>
+                  <tr><td colspan="8" style="text-align:center;padding:24px;">Đang tải dữ liệu...</td></tr>
                 </tbody>
               </table>
             </div>
+
+            <!-- Giao diện Thẻ gọn (Card View) tự động kích hoạt khi cầm Điện thoại dọc -->
+            <div id="mobile-tasks-cards" class="mobile-task-cards"></div>
           </div>
         </div>
 
@@ -317,9 +320,9 @@
     </div>
   </div>
 
-  <script src="../assets/js/api.js?v=20261119-4"></script>
-  <script src="../assets/js/app.js?v=20261119-4"></script>
-  <script src="../assets/js/tasks.js"></script>
+  <script src="../assets/js/api.js?v=20261120"></script>
+  <script src="../assets/js/app.js?v=20261120"></script>
+  <script src="../assets/js/tasks.js?v=20261120"></script>
   <script>
     let viewingTrash = false;
     let currentTasks = [];
@@ -385,7 +388,6 @@
         ? 'Thùng rác Công việc & Nhiệm vụ đã xóa mềm'
         : 'Danh sách Công việc & Nhiệm vụ hiện hành';
 
-      // Hiện nút dọn sạch tất cả việc đã hủy nếu có ít nhất 1 nhiệm vụ đã hủy thuộc quyền xóa
       const purgeBtn = document.getElementById('btn-purge-cancelled');
       const purgeCount = Number(sum.cancelledDeletable) || 0;
       if (!viewingTrash && purgeCount > 0) {
@@ -396,33 +398,39 @@
       }
 
       const tbody = document.getElementById('tbody-tasks');
+      const mobileCards = document.getElementById('mobile-tasks-cards');
+
       if (currentTasks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#64748b;">Không có công việc nào khớp với điều kiện lọc.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#64748b;">Không có công việc nào khớp với điều kiện lọc.</td></tr>';
+        mobileCards.innerHTML = '<div style="text-align:center;padding:24px;color:#64748b;">Không có công việc nào khớp với điều kiện lọc.</div>';
         return;
       }
 
+      // 1. Render Bảng 8 cột (gộp Mã NV + Phân loại vào ô Tên công việc)
       tbody.innerHTML = currentTasks.map(t => {
         const recBadge = t.Recurring_ID ? `<span class="role-badge role-MANAGER" title="Mã chuỗi: ${App.escapeHtml(t.Recurring_ID)}">🔁 ${App.escapeHtml(t.Recurring_ID)}</span>` : '';
         const canHardDelete = t.Can_Modify && (t.Status === 'CANCELLED' || viewingTrash);
 
         return `
           <tr>
-            <td>
-              <a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(t.Task_ID)}</a>
-              <div>${recBadge}</div>
+            <td class="task-col-main">
+              <a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="task-title-main">
+                ${App.escapeHtml(t.Title)}
+              </a>
+              <div class="task-sub-meta">
+                <a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="task-code-tag">${App.escapeHtml(t.Task_ID)}</a>
+                ${TaskUI.renderCategoryBadge(t.Task_Category)}
+                ${recBadge}
+                <span>${App.escapeHtml(t.Group_Name)} • ${TaskUI.NATURE_META[t.Task_Nature] || t.Task_Nature}</span>
+              </div>
             </td>
-            <td>
-              <div><a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" style="font-weight:700;color:var(--navy-800);text-decoration:none;">${App.escapeHtml(t.Title)}</a></div>
-              <small style="color:var(--slate-500);">${App.escapeHtml(t.Group_Name)} | ${TaskUI.NATURE_META[t.Task_Nature] || t.Task_Nature}</small>
-            </td>
-            <td>${TaskUI.renderCategoryBadge(t.Task_Category)}</td>
             <td>${App.escapeHtml(t.Assigner_Name)}</td>
             <td><strong>${App.escapeHtml(t.Primary_Assignee_Name)}</strong></td>
             <td style="white-space:nowrap;">${TaskUI.formatVnDate(t.Due_Date, t.Due_Time)}</td>
             <td>${TaskUI.renderPriorityBadge(t.Priority)}</td>
             <td>${TaskUI.renderProgressBar(t.Progress)}</td>
             <td>${TaskUI.renderStatusBadge(t.Status)}</td>
-            <td style="white-space:nowrap;">
+            <td style="white-space:nowrap;text-align:right;">
               <a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-outline btn-sm">Chi tiết</a>
               ${!viewingTrash && t.Status === 'PENDING' && t.Primary_Assignee_ID === App.currentUser.User_ID ? `
                 <button class="btn btn-primary btn-sm" onclick="quickAccept('${App.escapeHtml(t.Task_ID)}')">Tiếp nhận</button>
@@ -435,6 +443,45 @@
               ` : ''}
             </td>
           </tr>
+        `;
+      }).join('');
+
+      // 2. Render Thẻ gọn (Card View) cho điện thoại cầm dọc
+      mobileCards.innerHTML = currentTasks.map(t => {
+        const recBadge = t.Recurring_ID ? `<span class="role-badge role-MANAGER">🔁 ${App.escapeHtml(t.Recurring_ID)}</span>` : '';
+        const canHardDelete = t.Can_Modify && (t.Status === 'CANCELLED' || viewingTrash);
+
+        return `
+          <div class="mob-task-card prio-${App.escapeHtml(t.Priority)} st-${App.escapeHtml(t.Status)}">
+            <div class="mob-task-top">
+              <strong style="color:var(--blue-600);">${App.escapeHtml(t.Task_ID)}</strong>
+              <span>Hạn: <strong style="color:${t.Status === 'OVERDUE' ? '#b91c1c' : '#0f2942'};">${TaskUI.formatVnDate(t.Due_Date, t.Due_Time)}</strong></span>
+            </div>
+            <a class="mob-task-title" href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}">${App.escapeHtml(t.Title)}</a>
+            <div class="mob-task-badges">
+              ${TaskUI.renderStatusBadge(t.Status)}
+              ${TaskUI.renderPriorityBadge(t.Priority)}
+              ${TaskUI.renderCategoryBadge(t.Task_Category)}
+              ${recBadge}
+            </div>
+            <div class="mob-task-meta">
+              <div>👤 Thực hiện:<br><strong>${App.escapeHtml(t.Primary_Assignee_Name)}</strong></div>
+              <div>🏛️ Đơn vị:<br><strong>${App.escapeHtml(t.Group_Name)}</strong></div>
+            </div>
+            <div style="margin-bottom:8px;">${TaskUI.renderProgressBar(t.Progress)}</div>
+            <div class="mob-task-actions">
+              <a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-outline btn-sm">👁️ Chi tiết</a>
+              ${!viewingTrash && t.Status === 'PENDING' && t.Primary_Assignee_ID === App.currentUser.User_ID ? `
+                <button class="btn btn-primary btn-sm" onclick="quickAccept('${App.escapeHtml(t.Task_ID)}')">✋ Tiếp nhận</button>
+              ` : ''}
+              ${viewingTrash && t.Can_Modify ? `
+                <button class="btn btn-outline btn-sm" onclick="restoreTaskRow('${App.escapeHtml(t.Task_ID)}')">♻️ Khôi phục</button>
+              ` : ''}
+              ${canHardDelete ? `
+                <button class="btn btn-danger btn-sm" onclick="deleteTaskPermanentRow('${App.escapeHtml(t.Task_ID)}', this)">🗑️ Xóa hẳn</button>
+              ` : ''}
+            </div>
+          </div>
         `;
       }).join('');
     }
@@ -600,7 +647,6 @@
         fetchAndRenderTasks();
       });
 
-      // Dọn sạch hàng loạt toàn bộ nhiệm vụ đã hủy
       document.getElementById('btn-purge-cancelled').addEventListener('click', async () => {
         const cnt = document.getElementById('cnt-cancelled-purge').textContent;
         if (!confirm(`Xác nhận XÓA VĨNH VIỄN toàn bộ ${cnt} nhiệm vụ ĐÃ HỦY khỏi hệ thống?\n(Mọi dữ liệu liên quan sẽ bị xóa sạch hoàn toàn và không thể khôi phục)`)) return;
@@ -611,7 +657,6 @@
         try {
           const res = await ApiClient.call('tasks.purgeCancelled', {}, { timeoutMs: 120000 });
           App.toast(res.message, res.success ? 'success' : 'error');
-          await fetchAndRenderTasks();
         } catch (err) {
           App.toast(err.message, 'error');
         } finally {

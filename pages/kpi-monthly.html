@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Danh mục Công việc & Đánh giá KPI</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-4">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261120">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#0f2942">
   <style>
@@ -110,14 +110,16 @@
     }
 
     #kpi-workspace-card.kpi-fullscreen #tab-plan,
-    #kpi-workspace-card.kpi-fullscreen #tab-kpi {
+    #kpi-workspace-card.kpi-fullscreen #tab-kpi,
+    #kpi-workspace-card.kpi-fullscreen #tab-unit {
       flex: 1;
       min-height: 0;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
 
-    #kpi-workspace-card.kpi-fullscreen #tab-plan .table-responsive {
+    #kpi-workspace-card.kpi-fullscreen #tab-plan .table-responsive,
+    #kpi-workspace-card.kpi-fullscreen #tab-unit .table-responsive {
       max-height: calc(100dvh - 155px);
       overflow: auto;
     }
@@ -127,7 +129,6 @@
       overflow: auto;
     }
 
-    /* Ghim cố định tiêu đề cột bảng khi cuộn dọc trong chế độ Toàn màn hình */
     #kpi-workspace-card.kpi-fullscreen .kpi-grid-table thead {
       position: sticky;
       top: 0;
@@ -148,10 +149,10 @@
             <div class="card-title">🏅 Triển khai Danh mục Công việc & Tính điểm KPI Cá nhân</div>
             <div class="export-group">
               <button class="btn btn-primary btn-sm" id="btn-save-kpi" onclick="saveAllKpi()">💾 Lưu Danh mục & KPI</button>
-              <button class="btn btn-outline btn-sm" onclick="exportPlan('WORD')">📄 Tải Danh mục SP (word)</button>
-              <button class="btn btn-outline btn-sm" onclick="exportPlan('EXCEL')">📊 Tải Danh mục SP (excel)</button>
-              <button class="btn btn-success btn-sm" onclick="exportKpi('WORD')">📝 Tải KPI (word)</button>
-              <button class="btn btn-success btn-sm" onclick="exportKpi('EXCEL')">📗 Tải KPI (excel)</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPlan('WORD')">📄 Word Mẫu 1</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPlan('EXCEL')">📊 Excel Mẫu 1</button>
+              <button class="btn btn-success btn-sm" onclick="exportKpi('WORD')">📝 Word Mẫu 2 (KPI)</button>
+              <button class="btn btn-success btn-sm" onclick="exportKpi('EXCEL')">📗 Excel Mẫu 2 (KPI công thức)</button>
             </div>
           </div>
 
@@ -211,12 +212,13 @@
           </div>
         </div>
 
-        <!-- Tabs Mẫu 1 & Mẫu 2 (Hỗ trợ phóng to toàn màn hình + Tùy biến Zoom) -->
+        <!-- Tabs Mẫu 1, Mẫu 2 & Tổng hợp Toàn đơn vị -->
         <div class="card" id="kpi-workspace-card" style="margin-top:14px;">
           <div class="tab-bar">
             <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
               <button class="btn btn-primary btn-sm" id="tab-btn-plan" onclick="switchKpiTab('PLAN')">1. Danh mục Sản phẩm/Công việc</button>
               <button class="btn btn-outline btn-sm" id="tab-btn-kpi" onclick="switchKpiTab('KPI')">2. Biểu tính điểm KPI cá nhân (16 cột)</button>
+              <button class="btn btn-outline btn-sm" id="tab-btn-unit" style="display:none;" onclick="switchKpiTab('UNIT')">3. Tổng hợp KPI Toàn đơn vị</button>
               <span id="lbl-period-badge" class="period-badge">Đang tải...</span>
             </div>
 
@@ -353,6 +355,46 @@
               </div>
             </div>
           </div>
+
+          <!-- TAB 3: TỔNG HỢP KPI TOÀN ĐƠN VỊ (SUPER_ADMIN & MANAGER) -->
+          <div id="tab-unit" style="display:none;">
+            <div class="plan-action-bar">
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <select id="unit-flt-group" class="form-control" style="width:auto; min-width:200px; padding:5px 8px; font-size:12.5px;" onchange="renderUnitSummaryTable()">
+                  <option value="ALL">Tất cả Bộ phận / Đơn vị</option>
+                </select>
+                <button type="button" class="btn btn-primary btn-sm" onclick="loadUnitSummaryData()">🔄 Tải lại Tổng hợp</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="exportUnitKpiExcelBtn()">📗 Xuất Excel Tổng hợp Đơn vị</button>
+              </div>
+              <div id="unit-stats-bar" style="font-size:12.5px; color:#0f2942; font-weight:600;"></div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="kpi-grid-table" id="table-unit-grid">
+                <thead>
+                  <tr>
+                    <th style="width:36px;">TT</th>
+                    <th style="min-width:175px;">Họ và tên / Chức vụ</th>
+                    <th style="min-width:135px;">Bộ phận / Đơn vị</th>
+                    <th>Việc HT</th>
+                    <th>A (%)</th>
+                    <th>B (%)</th>
+                    <th>C (%)</th>
+                    <th>D (%)</th>
+                    <th>KPI TB (%)</th>
+                    <th>Tiêu chí chung</th>
+                    <th>Tổng điểm</th>
+                    <th style="min-width:170px;">Mức xếp loại</th>
+                    <th>Chi tiết</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-unit-kpi">
+                  <tr><td colspan="13" style="text-align:center;padding:20px;color:#64748b;">Đang tải bảng tổng hợp...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </main>
     </div>
@@ -360,11 +402,13 @@
 
   <!-- Thư viện đọc/xuất Excel hỗ trợ công thức sống + kẻ khung & Times New Roman -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-  <script src="../assets/js/api.js?v=20261119-4"></script>
-  <script src="../assets/js/app.js?v=20261119-4"></script>
-  <script src="../assets/js/kpi-export.js?v=20261119-4"></script>
+  <script src="../assets/js/api.js?v=20261120"></script>
+  <script src="../assets/js/app.js?v=20261120"></script>
+  <script src="../assets/js/kpi-export.js?v=20261120"></script>
   <script>
     let currentData = null;
+    let currentUnitSummaryData = null;
+    let activeKpiTab = 'PLAN';
     let isSavingKpi = false;
     let currentZoomPct = 100;
     let isKpiFullscreen = false;
@@ -395,10 +439,10 @@
 
     function applyKpiZoom() {
       const ratio = currentZoomPct / 100;
-      const tblPlan = document.getElementById('table-plan-grid');
-      const tblKpi = document.getElementById('table-kpi-grid');
-      if (tblPlan) tblPlan.style.zoom = ratio;
-      if (tblKpi) tblKpi.style.zoom = ratio;
+      ['table-plan-grid', 'table-kpi-grid', 'table-unit-grid'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.zoom = ratio;
+      });
       const lbl = document.getElementById('kpi-zoom-label');
       if (lbl) lbl.textContent = currentZoomPct + '%';
       autoGrowAllTextareas();
@@ -478,6 +522,8 @@
         selUser.innerHTML = `<option value="${user.User_ID}">${App.escapeHtml(user.Full_Name)}</option>`;
         selUser.disabled = true;
       } else {
+        const btnUnit = document.getElementById('tab-btn-unit');
+        if (btnUnit) btnUnit.style.display = 'inline-flex';
         const uRes = await ApiClient.call('users.list');
         const users = (uRes.success && uRes.data.users) ? uRes.data.users : [user];
         selUser.innerHTML = users.map(u => `<option value="${u.User_ID}" ${u.User_ID === user.User_ID ? 'selected' : ''}>${App.escapeHtml(u.Full_Name)} (${App.escapeHtml(u.Position || u.Role)})</option>`).join('');
@@ -493,11 +539,19 @@
     }
 
     function switchKpiTab(tab) {
+      activeKpiTab = tab;
       document.getElementById('tab-plan').style.display = tab === 'PLAN' ? 'block' : 'none';
       document.getElementById('tab-kpi').style.display = tab === 'KPI' ? 'block' : 'none';
+      document.getElementById('tab-unit').style.display = tab === 'UNIT' ? 'block' : 'none';
+
       document.getElementById('tab-btn-plan').className = tab === 'PLAN' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
       document.getElementById('tab-btn-kpi').className = tab === 'KPI' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
-      if (tab === 'KPI') renderKpiTable(); else renderPlanTable();
+      const btnUnit = document.getElementById('tab-btn-unit');
+      if (btnUnit) btnUnit.className = tab === 'UNIT' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+
+      if (tab === 'KPI') renderKpiTable();
+      else if (tab === 'UNIT') loadUnitSummaryData();
+      else renderPlanTable();
       autoGrowAllTextareas();
     }
 
@@ -545,6 +599,9 @@
 
       renderPlanTable();
       renderKpiTable();
+      if (activeKpiTab === 'UNIT') {
+        await loadUnitSummaryData();
+      }
     }
 
     /* =====================================================================
@@ -1132,6 +1189,115 @@
       } catch (err) {
         console.error('Lỗi xuất Mẫu 2:', err);
         App.toast('Lỗi xuất file Mẫu 2: ' + err.message, 'error');
+      }
+    }
+
+    /* =====================================================================
+     * CHỨC NĂNG 3: TAB TỔNG HỢP KPI TOÀN ĐƠN VỊ (ADMIN & MANAGER)
+     * ===================================================================== */
+    async function loadUnitSummaryData() {
+      const tbody = document.getElementById('tbody-unit-kpi');
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:20px;">Đang tổng hợp KPI toàn đơn vị...</td></tr>';
+
+      const res = await ApiClient.call('kpi.getUnitSummary', {
+        filterMode: document.getElementById('f-mode').value,
+        periodMonth: document.getElementById('f-month').value,
+        fromDate: document.getElementById('f-from-date').value,
+        toDate: document.getElementById('f-to-date').value
+      });
+
+      if (!res.success) {
+        App.toast(res.message, 'error');
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:20px;color:#b91c1c;">${App.escapeHtml(res.message)}</td></tr>`;
+        return;
+      }
+
+      currentUnitSummaryData = res.data;
+      const selGrp = document.getElementById('unit-flt-group');
+      const prevGrp = selGrp.value || 'ALL';
+      selGrp.innerHTML = '<option value="ALL">Tất cả Bộ phận / Đơn vị</option>' +
+        (res.data.groups || []).map(g => `<option value="${App.escapeHtml(g.Group_ID)}">${App.escapeHtml(g.Group_Name)}</option>`).join('');
+      if ([...selGrp.options].some(o => o.value === prevGrp)) {
+        selGrp.value = prevGrp;
+      }
+
+      renderUnitSummaryTable();
+    }
+
+    function renderUnitSummaryTable() {
+      if (!currentUnitSummaryData) return;
+      const grpId = document.getElementById('unit-flt-group').value;
+      const rows = (currentUnitSummaryData.rows || []).filter(r => grpId === 'ALL' || r.Group_ID === grpId);
+
+      const evaluated = rows.filter(r => r.Has_Kpi_Record);
+      const avg = evaluated.length
+        ? (evaluated.reduce((acc, x) => acc + x.Total_Final_Score, 0) / evaluated.length).toFixed(2)
+        : '0';
+      const exc = evaluated.filter(x => String(x.Self_Rating_Level || '').toLowerCase().includes('xuất sắc')).length;
+
+      document.getElementById('unit-stats-bar').textContent =
+        `Kỳ ${currentUnitSummaryData.periodLabel} • Đã đánh giá: ${evaluated.length}/${rows.length} cán bộ • Điểm TB: ${avg} đ • Xuất sắc: ${exc}`;
+
+      const tbody = document.getElementById('tbody-unit-kpi');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:20px;color:#64748b;">Không có cán bộ nào trong bộ phận này.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map((r, i) => `
+        <tr style="${r.Has_Kpi_Record ? '' : 'background:#f8fafc;color:#64748b;'}">
+          <td style="text-align:center;vertical-align:middle;">${i + 1}</td>
+          <td style="vertical-align:middle;">
+            <strong>${App.escapeHtml(r.Full_Name)}</strong>
+            <br><small style="color:#64748b;">${App.escapeHtml(r.Position || r.Role)}</small>
+          </td>
+          <td style="vertical-align:middle;">${App.escapeHtml(r.Group_Name)}</td>
+          <td style="text-align:center;vertical-align:middle;"><strong>${r.Completed_Tasks}/${r.Total_Tasks}</strong></td>
+          <td style="text-align:center;vertical-align:middle;">${r.Has_Kpi_Record ? r.A_Percent + '%' : '—'}</td>
+          <td style="text-align:center;vertical-align:middle;">${r.Has_Kpi_Record ? r.B_Percent + '%' : '—'}</td>
+          <td style="text-align:center;vertical-align:middle;">${r.Has_Kpi_Record ? r.C_Percent + '%' : '—'}</td>
+          <td style="text-align:center;vertical-align:middle;">${r.Has_Kpi_Record ? r.D_Percent + '%' : '—'}</td>
+          <td style="text-align:center;vertical-align:middle;font-weight:700;color:#1d4ed8;">${r.Has_Kpi_Record ? r.Kpi_Avg_Percent + '%' : '—'}</td>
+          <td style="text-align:center;vertical-align:middle;">${r.Has_Kpi_Record ? r.General_Score : '—'}</td>
+          <td style="text-align:center;vertical-align:middle;font-weight:800;color:#b91c1c;">${r.Has_Kpi_Record ? r.Total_Final_Score : '—'}</td>
+          <td style="vertical-align:middle;">${App.escapeHtml(r.Self_Rating_Level)}</td>
+          <td style="text-align:center;vertical-align:middle;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="openUserKpiFromUnit('${App.escapeHtml(r.User_ID)}')">Xem KPI</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function openUserKpiFromUnit(uid) {
+      const sel = document.getElementById('f-user');
+      if (sel) sel.value = uid;
+      switchKpiTab('KPI');
+      await loadMonthlyData();
+    }
+
+    function exportUnitKpiExcelBtn() {
+      try {
+        if (!currentUnitSummaryData || !currentUnitSummaryData.rows.length) {
+          return App.toast('Chưa có dữ liệu tổng hợp để xuất Excel.', 'error');
+        }
+        const grpId = document.getElementById('unit-flt-group').value;
+        const filteredRows = currentUnitSummaryData.rows.filter(r => grpId === 'ALL' || r.Group_ID === grpId);
+        if (!filteredRows.length) {
+          return App.toast('Không có cán bộ nào thuộc bộ phận đang lọc để xuất Excel.', 'error');
+        }
+        KpiExporter.exportUnitKpiExcel(
+          Object.assign({}, currentUnitSummaryData, { rows: filteredRows }),
+          {
+            Party_Committee: document.getElementById('h-party-committee').value.trim(),
+            Party_Cell: document.getElementById('h-party-cell').value.trim(),
+            Location_Name: document.getElementById('h-location').value.trim() || 'Quảng Trị',
+            Secretary_Name: document.getElementById('h-secretary').value.trim()
+          }
+        );
+        App.toast('Đang tải tệp Excel Tổng hợp KPI toàn đơn vị...', 'success');
+      } catch (err) {
+        console.error('Lỗi xuất Excel tổng hợp đơn vị:', err);
+        App.toast('Lỗi xuất Excel tổng hợp: ' + err.message, 'error');
       }
     }
   </script>

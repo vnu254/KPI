@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Cài đặt Hệ thống & Cấu hình Zalo Bot</title>
-  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-5">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261120">
 </head>
 <body>
   <div class="app-layout">
@@ -101,7 +101,6 @@
             <button type="submit" class="btn btn-primary">🔐 Cập nhật Cấu hình Bảo mật Zalo Bot</button>
           </form>
 
-          <!-- CÔNG CỤ TỰ ĐỘNG DÒ CHAT ID TỪ TIN NHẮN MỚI & TEST BOT -->
           <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--slate-200);">
             <div style="font-weight:700;color:var(--navy-800);margin-bottom:8px;">
               🔍 Công cụ Tự động Dò tìm Chat ID & Gửi tin nhắn Kiểm thử (Test Bot)
@@ -146,7 +145,7 @@
           </div>
 
           <!-- CÔNG TẮC BẬT / TẮT RIÊNG TỰ ĐỘNG SAO LƯU CSDL HẰNG NGÀY -->
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 16px;margin-bottom:18px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 16px;margin-bottom:16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
             <div>
               <div style="font-weight:700;color:var(--navy-800);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <span>🗄️ Tự động sao lưu CSDL Google Sheets hằng ngày (00:15)</span>
@@ -157,6 +156,27 @@
               </small>
             </div>
             <button type="button" class="btn btn-outline" id="btn-toggle-auto-backup" disabled>Đang tải...</button>
+          </div>
+
+          <!-- CẤU HÌNH XOAY VÒNG BẢN SAO LƯU & GOOGLE CALENDAR ID -->
+          <div class="form-grid" style="margin-bottom:18px;">
+            <div style="padding:14px 16px;background:var(--slate-100);border-radius:8px;">
+              <label class="form-label" style="margin-bottom:6px;">♻️ Xoay vòng bản sao lưu Drive (Giữ tối đa bao nhiêu bản gần nhất?)</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="number" id="set-backup-retention" class="form-control" value="7" min="0" max="60" style="max-width:110px;text-align:center;">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-save-backup-retention">Lưu giới hạn</button>
+              </div>
+              <small style="color:var(--slate-500);display:block;margin-top:4px;">VD: Nhập <strong>7</strong> để tự đưa bản cũ hơn 7 bản gần nhất vào Thùng rác (nhập <strong>0</strong> = giữ tất cả).</small>
+            </div>
+
+            <div style="padding:14px 16px;background:var(--slate-100);border-radius:8px;">
+              <label class="form-label" style="margin-bottom:6px;">📅 Google Calendar ID (Đồng bộ Lịch công việc)</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" id="sec-calendar-id" class="form-control" placeholder="primary hoặc xxxx@group.calendar.google.com">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-save-calendar-id">Lưu Lịch</button>
+              </div>
+              <small style="color:var(--slate-500);display:block;margin-top:4px;">Để trống hoặc nhập <code>primary</code> để đồng bộ vào lịch mặc định của tài khoản Google.</small>
+            </div>
           </div>
 
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
@@ -212,18 +232,18 @@
     </div>
   </div>
 
-  <script src="../assets/js/api.js?v=20261119-5"></script>
-  <script src="../assets/js/app.js?v=20261119-5"></script>
-  <script src="../assets/js/settings.js"></script>
+  <script src="../assets/js/api.js?v=20261120"></script>
+  <script src="../assets/js/app.js?v=20261120"></script>
+  <script src="../assets/js/settings.js?v=20261120"></script>
   <script>
-    let isAutoBackupEnabled = true;
+    window.isAutoBackupEnabled = true;
 
-    function renderAutoBackupToggleUI() {
+    window.renderAutoBackupToggleUI = function() {
       const badge = document.getElementById('auto-backup-status-badge');
       const btn = document.getElementById('btn-toggle-auto-backup');
       if (!badge || !btn) return;
 
-      if (isAutoBackupEnabled) {
+      if (window.isAutoBackupEnabled) {
         badge.className = 'status-badge status-ACTIVE';
         badge.textContent = '🟢 ĐANG BẬT';
         btn.className = 'btn btn-danger btn-sm';
@@ -235,18 +255,7 @@
         btn.textContent = '▶️ Bật tự động sao lưu';
       }
       btn.disabled = false;
-    }
-
-    async function loadAutoBackupState() {
-      try {
-        const res = await ApiClient.call('settings.get', {});
-        if (res.success && res.data && res.data.settings) {
-          const rawVal = res.data.settings.ENABLE_DAILY_BACKUP;
-          isAutoBackupEnabled = (rawVal === undefined || String(rawVal).trim().toLowerCase() !== 'false');
-        }
-      } catch (e) {}
-      renderAutoBackupToggleUI();
-    }
+    };
 
     window.switchSettingTab = function(tab) {
       const tabs = ['general', 'zalo', 'auto', 'audit'];
@@ -271,12 +280,11 @@
 
       document.getElementById('test-bot-chatid').value = user.Zalo_Chat_ID || '';
       await SettingsController.init();
-      await loadAutoBackupState();
 
-      // Bật / Tắt tự động sao lưu CSDL hằng ngày (Lưu trực tiếp vào bảng SETTINGS)
+      // Bật / Tắt tự động sao lưu CSDL hằng ngày
       document.getElementById('btn-toggle-auto-backup').addEventListener('click', async () => {
         const btn = document.getElementById('btn-toggle-auto-backup');
-        const nextVal = !isAutoBackupEnabled;
+        const nextVal = !window.isAutoBackupEnabled;
         btn.disabled = true;
         btn.textContent = 'Đang cập nhật...';
         try {
@@ -284,7 +292,7 @@
             settings: { ENABLE_DAILY_BACKUP: String(nextVal) }
           });
           if (res.success) {
-            isAutoBackupEnabled = nextVal;
+            window.isAutoBackupEnabled = nextVal;
             App.toast(
               nextVal
                 ? 'Đã BẬT tự động sao lưu CSDL hằng ngày lúc 00:15.'
@@ -297,8 +305,29 @@
         } catch (err) {
           App.toast(err.message, 'error');
         } finally {
-          renderAutoBackupToggleUI();
+          window.renderAutoBackupToggleUI();
         }
+      });
+
+      // Lưu giới hạn xoay vòng bản sao lưu Drive
+      document.getElementById('btn-save-backup-retention').addEventListener('click', async () => {
+        const val = Math.max(0, parseInt(document.getElementById('set-backup-retention').value, 10) || 0);
+        const res = await ApiClient.call('settings.saveGeneral', {
+          settings: { BACKUP_RETENTION_DAYS: String(val) }
+        });
+        App.toast(
+          res.success
+            ? `Đã lưu: giữ tối đa ${val === 0 ? 'toàn bộ' : val + ' bản'} sao lưu gần nhất trên Drive.`
+            : res.message,
+          res.success ? 'success' : 'error'
+        );
+      });
+
+      // Lưu Google Calendar ID vào Script Properties
+      document.getElementById('btn-save-calendar-id').addEventListener('click', async () => {
+        const calId = document.getElementById('sec-calendar-id').value.trim();
+        const res = await ApiClient.call('settings.saveSecrets', { googleCalendarId: calId });
+        App.toast(res.success ? 'Đã lưu Google Calendar ID thành công!' : res.message, res.success ? 'success' : 'error');
       });
 
       // Lưu Tab 1: Cài đặt chung
@@ -310,7 +339,6 @@
           .map(x => parseInt(x.trim(), 10))
           .filter(x => !isNaN(x) && x > 0);
         const allMins = [...new Set(checkedMins.concat(customMins))].sort((a, b) => b - a);
-
         const disabledTypes = Array.from(document.querySelectorAll('.chk-notify-type:not(:checked)')).map(c => c.value);
 
         const settingsPayload = {
@@ -372,21 +400,20 @@
         App.toast(res.message, res.success ? 'success' : 'error');
       });
 
-      // Cài đặt Triggers
+      // Cài đặt / Gỡ bỏ Triggers
       document.getElementById('btn-install-all-triggers').addEventListener('click', async () => {
         const res = await ApiClient.call('settings.installTriggers', {});
         App.toast(res.message, res.success ? 'success' : 'error');
         SettingsController.loadAllSettings();
       });
 
-      // Gỡ bỏ Triggers
       document.getElementById('btn-remove-all-triggers').addEventListener('click', async () => {
         const res = await ApiClient.call('settings.removeTriggers', {});
         App.toast(res.message, res.success ? 'success' : 'error');
         SettingsController.loadAllSettings();
       });
 
-      // Sao lưu CSDL sang Google Drive
+      // Sao lưu CSDL thủ công
       document.getElementById('btn-backup-db-now').addEventListener('click', async () => {
         const btn = document.getElementById('btn-backup-db-now');
         btn.disabled = true;
@@ -410,7 +437,6 @@
         }
       });
 
-      // Kiểm tra & Đồng bộ 17 Sheet
       document.getElementById('btn-verify-db-schema').addEventListener('click', async () => {
         const res = await ApiClient.call('system.verifyDatabase', {});
         App.toast(res.message, res.success ? 'success' : 'error');

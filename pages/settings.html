@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<link rel="manifest" href="../manifest.json">
-<meta name="theme-color" content="#0f2942">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#0f2942">
   <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="QLCV & KPI">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Cài đặt Hệ thống & Cấu hình Zalo Bot</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-5">
 </head>
 <body>
   <div class="app-layout">
@@ -132,7 +132,7 @@
               <div id="sec-trigger-15m" style="margin-top:6px;"></div>
             </div>
             <div style="padding:14px;background:var(--slate-100);border-radius:8px;">
-              <div style="font-size:12px;color:var(--slate-500);">Trigger Sinh Nhiệm vụ Định kỳ & Sao lưu (Hằng ngày)</div>
+              <div style="font-size:12px;color:var(--slate-500);">Trigger Sinh Nhiệm vụ Định kỳ & Bảo trì (Hằng ngày)</div>
               <div id="sec-trigger-daily" style="margin-top:6px;"></div>
             </div>
             <div style="padding:14px;background:var(--slate-100);border-radius:8px;">
@@ -145,11 +145,25 @@
             </div>
           </div>
 
+          <!-- CÔNG TẮC BẬT / TẮT RIÊNG TỰ ĐỘNG SAO LƯU CSDL HẰNG NGÀY -->
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 16px;margin-bottom:18px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
+            <div>
+              <div style="font-weight:700;color:var(--navy-800);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span>🗄️ Tự động sao lưu CSDL Google Sheets hằng ngày (00:15)</span>
+                <span id="auto-backup-status-badge" class="status-badge status-ACTIVE">Đang tải...</span>
+              </div>
+              <small style="color:var(--slate-700);">
+                Khi tắt, hệ thống ngừng tự tạo bản sao CSDL mỗi đêm để tiết kiệm dung lượng Google Drive (vẫn giữ nguyên nhắc việc Zalo, nhiệm vụ định kỳ và nút Sao lưu thủ công).
+              </small>
+            </div>
+            <button type="button" class="btn btn-outline" id="btn-toggle-auto-backup" disabled>Đang tải...</button>
+          </div>
+
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
             <button type="button" class="btn btn-primary" id="btn-install-all-triggers">⏰ Kích hoạt Bộ Trigger Tự động (15p & Hằng ngày)</button>
             <button type="button" class="btn btn-outline" id="btn-remove-all-triggers">⏸️ Tạm dừng / Gỡ bỏ Triggers</button>
             <button type="button" class="btn btn-primary" id="btn-backup-db-now">💾 Sao lưu CSDL Google Sheets sang Google Drive ngay</button>
-            <button type="button" class="btn btn-outline" id="btn-verify-db-schema">🛠️ Kiểm tra & Đồng bộ lại 16 Sheet</button>
+            <button type="button" class="btn btn-outline" id="btn-verify-db-schema">🛠️ Kiểm tra & Đồng bộ lại 17 Sheet</button>
           </div>
 
           <div id="backup-result-box"></div>
@@ -198,10 +212,42 @@
     </div>
   </div>
 
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/api.js?v=20261119-5"></script>
+  <script src="../assets/js/app.js?v=20261119-5"></script>
   <script src="../assets/js/settings.js"></script>
   <script>
+    let isAutoBackupEnabled = true;
+
+    function renderAutoBackupToggleUI() {
+      const badge = document.getElementById('auto-backup-status-badge');
+      const btn = document.getElementById('btn-toggle-auto-backup');
+      if (!badge || !btn) return;
+
+      if (isAutoBackupEnabled) {
+        badge.className = 'status-badge status-ACTIVE';
+        badge.textContent = '🟢 ĐANG BẬT';
+        btn.className = 'btn btn-danger btn-sm';
+        btn.textContent = '⏸️ Tắt tự động sao lưu';
+      } else {
+        badge.className = 'status-badge status-LOCKED';
+        badge.textContent = '⚪ ĐANG TẮT';
+        btn.className = 'btn btn-success btn-sm';
+        btn.textContent = '▶️ Bật tự động sao lưu';
+      }
+      btn.disabled = false;
+    }
+
+    async function loadAutoBackupState() {
+      try {
+        const res = await ApiClient.call('settings.get', {});
+        if (res.success && res.data && res.data.settings) {
+          const rawVal = res.data.settings.ENABLE_DAILY_BACKUP;
+          isAutoBackupEnabled = (rawVal === undefined || String(rawVal).trim().toLowerCase() !== 'false');
+        }
+      } catch (e) {}
+      renderAutoBackupToggleUI();
+    }
+
     window.switchSettingTab = function(tab) {
       const tabs = ['general', 'zalo', 'auto', 'audit'];
       tabs.forEach(t => {
@@ -225,6 +271,35 @@
 
       document.getElementById('test-bot-chatid').value = user.Zalo_Chat_ID || '';
       await SettingsController.init();
+      await loadAutoBackupState();
+
+      // Bật / Tắt tự động sao lưu CSDL hằng ngày (Lưu trực tiếp vào bảng SETTINGS)
+      document.getElementById('btn-toggle-auto-backup').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-toggle-auto-backup');
+        const nextVal = !isAutoBackupEnabled;
+        btn.disabled = true;
+        btn.textContent = 'Đang cập nhật...';
+        try {
+          const res = await ApiClient.call('settings.saveGeneral', {
+            settings: { ENABLE_DAILY_BACKUP: String(nextVal) }
+          });
+          if (res.success) {
+            isAutoBackupEnabled = nextVal;
+            App.toast(
+              nextVal
+                ? 'Đã BẬT tự động sao lưu CSDL hằng ngày lúc 00:15.'
+                : 'Đã TẮT tự động sao lưu CSDL hằng ngày (Nhắc việc & định kỳ vẫn chạy bình thường).',
+              'success'
+            );
+          } else {
+            App.toast(res.message, 'error');
+          }
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          renderAutoBackupToggleUI();
+        }
+      });
 
       // Lưu Tab 1: Cài đặt chung
       document.getElementById('form-general-settings').addEventListener('submit', async (e) => {
@@ -335,7 +410,7 @@
         }
       });
 
-      // Kiểm tra & Đồng bộ 16 Sheet
+      // Kiểm tra & Đồng bộ 17 Sheet
       document.getElementById('btn-verify-db-schema').addEventListener('click', async () => {
         const res = await ApiClient.call('system.verifyDatabase', {});
         App.toast(res.message, res.success ? 'success' : 'error');

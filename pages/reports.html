@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<link rel="manifest" href="../manifest.json">
-<meta name="theme-color" content="#0f2942">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#0f2942">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Báo cáo Tiến độ & Đánh giá Kết quả</title>
@@ -103,7 +103,7 @@
                   <th>Tiến độ</th>
                   <th>Minh chứng (Drive)</th>
                   <th>Trạng thái duyệt</th>
-                  <th>Ý kiến người giao việc</th>
+                  <th>Ý kiến người xét duyệt</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
@@ -132,7 +132,7 @@
                   <th>Điểm Chất lượng (60%)</th>
                   <th>Tổng điểm</th>
                   <th>Xếp loại</th>
-                  <th>Nhận xét của Cán bộ quản lý</th>
+                  <th>Nhận xét của Cán bộ xét duyệt</th>
                 </tr>
               </thead>
               <tbody id="tbody-scores">
@@ -221,7 +221,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Ý kiến nhận xét / Chỉ đạo của người giao việc *</label>
+          <label class="form-label">Ý kiến nhận xét / Chỉ đạo của Cán bộ xét duyệt *</label>
           <textarea id="rv-comment" class="form-control" rows="3" placeholder="Nhập nhận xét kết quả hoặc nội dung yêu cầu bổ sung/làm lại..." required></textarea>
         </div>
 
@@ -238,6 +238,7 @@
   <script src="../assets/js/tasks.js"></script>
   <script src="../assets/js/reports.js"></script>
   <script>
+    let currentUserObj = null;
     let allReportsData = [];
     let allScoresData = [];
 
@@ -272,12 +273,17 @@
           users.map(u => `<option value="${App.escapeHtml(u.User_ID)}">${App.escapeHtml(u.Full_Name)}</option>`).join('');
       }
 
-      if (taskRes.success) {
-        // CHỈ LẤY NHIỆM VỤ MÀ USER ĐANG ĐĂNG NHẬP LÀ NGƯỜI THỰC HIỆN VÀ CHƯA HOÀN THÀNH
-        const myTasks = (taskRes.data.tasks || []).filter(t => 
-          t.Is_Assignee === true && t.Status !== 'CANCELLED' && t.Status !== 'COMPLETED'
-        );
-        
+      if (taskRes.success && currentUserObj) {
+        const myUid = String(currentUserObj.User_ID);
+        // Lấy cả nhiệm vụ được giao (Chủ trì / Phối hợp) VÀ công việc cá nhân của tài khoản đang đăng nhập
+        const myTasks = (taskRes.data.tasks || []).filter(t => {
+          if (t.Status === 'CANCELLED' || t.Status === 'COMPLETED') return false;
+          const isPrimary = String(t.Primary_Assignee_ID) === myUid;
+          const isMember = Array.isArray(t.Members) && t.Members.some(m => String(m.User_ID) === myUid);
+          const isPersonalOwner = t.Task_Category === 'PERSONAL' && String(t.Creator_ID) === myUid;
+          return t.Is_Assignee === true || isPrimary || isMember || isPersonalOwner;
+        });
+
         const sel = document.getElementById('sr-task-id');
         if (myTasks.length === 0) {
           sel.innerHTML = '<option value="">-- Bạn không có nhiệm vụ nào cần báo cáo --</option>';
@@ -318,32 +324,35 @@
       if (allReportsData.length === 0) {
         tbodyRep.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#64748b;">Chưa có báo cáo tiến độ nào khớp điều kiện lọc.</td></tr>';
       } else {
-        tbodyRep.innerHTML = allReportsData.map(r => `
-          <tr>
-            <td><strong>${App.escapeHtml(r.Report_ID)}</strong><br><small style="color:var(--slate-500);">${App.escapeHtml(r.Reported_At)}</small></td>
-            <td>
-              <a href="./task-detail.html?id=${encodeURIComponent(r.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(r.Task_Title)}</a>
-              <div><small style="color:var(--slate-500);">${App.escapeHtml(r.Task_ID)} | ${App.escapeHtml(r.Group_Name)}</small></div>
-            </td>
-            <td><strong>${App.escapeHtml(r.Reporter_Name)}</strong></td>
-            <td>
-              <div><strong>Kết quả:</strong> ${App.escapeHtml(r.Result_Summary)}</div>
-              <div style="font-size:12px;color:var(--slate-700);margin-top:2px;">${App.escapeHtml(r.Report_Content)}</div>
-            </td>
-            <td>${TaskUI.renderProgressBar(r.Progress_Percent)}</td>
-            <td>${ReportUI.renderEvidenceLinks(r.Evidence_Files)}</td>
-            <td>${ReportUI.renderReviewBadge(r.Review_Status)}</td>
-            <td>
-              <div style="font-size:13px;">${App.escapeHtml(r.Reviewer_Comment || '---')}</div>
-              ${r.Reviewed_At ? `<small style="color:var(--slate-500);">Duyệt bởi: ${App.escapeHtml(r.Reviewer_Name)}</small>` : ''}
-            </td>
-            <td style="white-space:nowrap;">
-              ${r.Can_Review ? `
-                <button class="btn btn-primary btn-sm" onclick="openReviewModal('${App.escapeHtml(r.Report_ID)}')">✅ Xét duyệt</button>
-              ` : '<span style="color:#94a3b8;font-size:12px;">---</span>'}
-            </td>
-          </tr>
-        `).join('');
+        tbodyRep.innerHTML = allReportsData.map(r => {
+          const isPending = r.Review_Status === 'PENDING_REVIEW';
+          const reviewBtnHtml = r.Can_Review
+            ? `<button class="btn ${isPending ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="openReviewModal('${App.escapeHtml(r.Report_ID)}')">${isPending ? '✅ Xét duyệt' : '✏️ Duyệt lại'}</button>`
+            : '<span style="color:#94a3b8;font-size:12px;">---</span>';
+
+          return `
+            <tr>
+              <td><strong>${App.escapeHtml(r.Report_ID)}</strong><br><small style="color:var(--slate-500);">${App.escapeHtml(r.Reported_At)}</small></td>
+              <td>
+                <a href="./task-detail.html?id=${encodeURIComponent(r.Task_ID)}" style="font-weight:700;color:var(--blue-600);text-decoration:none;">${App.escapeHtml(r.Task_Title)}</a>
+                <div><small style="color:var(--slate-500);">${App.escapeHtml(r.Task_ID)} | ${App.escapeHtml(r.Group_Name)}</small></div>
+              </td>
+              <td><strong>${App.escapeHtml(r.Reporter_Name)}</strong></td>
+              <td>
+                <div><strong>Kết quả:</strong> ${App.escapeHtml(r.Result_Summary)}</div>
+                <div style="font-size:12px;color:var(--slate-700);margin-top:2px;">${App.escapeHtml(r.Report_Content)}</div>
+              </td>
+              <td>${TaskUI.renderProgressBar(r.Progress_Percent)}</td>
+              <td>${ReportUI.renderEvidenceLinks(r.Evidence_Files)}</td>
+              <td>${ReportUI.renderReviewBadge(r.Review_Status)}</td>
+              <td>
+                <div style="font-size:13px;">${App.escapeHtml(r.Reviewer_Comment || '---')}</div>
+                ${r.Reviewed_At ? `<small style="color:var(--slate-500);">Duyệt bởi: ${App.escapeHtml(r.Reviewer_Name)}</small>` : ''}
+              </td>
+              <td style="white-space:nowrap;">${reviewBtnHtml}</td>
+            </tr>
+          `;
+        }).join('');
       }
 
       const tbodyScr = document.getElementById('tbody-scores');
@@ -394,6 +403,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       const user = await App.initProtectedPage('reports', 'Báo cáo Tiến độ, Xét duyệt & Đánh giá Kết quả');
       if (!user) return;
+      currentUserObj = user;
 
       await loadFiltersAndTasksDropdown();
       await fetchAndRenderReports();
@@ -422,11 +432,15 @@
       // Xử lý Gửi báo cáo mới
       document.getElementById('form-submit-report').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const taskId = document.getElementById('sr-task-id').value;
+        if (!taskId) {
+          App.toast('Vui lòng chọn nhiệm vụ cần báo cáo.', 'error');
+          return;
+        }
         const btn = document.getElementById('btn-do-submit-report');
         btn.disabled = true;
         btn.textContent = 'Đang tải minh chứng & gửi báo cáo...';
         try {
-          const taskId = document.getElementById('sr-task-id').value;
           const fileInput = document.getElementById('sr-files');
           let uploadedFiles = [];
           if (fileInput.files.length > 0) {
@@ -444,7 +458,8 @@
           App.toast(res.message, res.success ? 'success' : 'error');
           if (res.success) {
             document.getElementById('modal-submit-report').classList.remove('open');
-            fetchAndRenderReports();
+            await loadFiltersAndTasksDropdown();
+            await fetchAndRenderReports();
           }
         } catch (err) {
           App.toast(err.message, 'error');
@@ -459,6 +474,7 @@
         e.preventDefault();
         const btn = document.getElementById('btn-do-review');
         btn.disabled = true;
+        btn.textContent = 'Đang lưu kết quả xét duyệt...';
         try {
           const decision = document.getElementById('rv-decision').value;
           const res = await ApiClient.call('reports.review', {
@@ -473,12 +489,13 @@
           App.toast(res.message, res.success ? 'success' : 'error');
           if (res.success) {
             document.getElementById('modal-review-report').classList.remove('open');
-            fetchAndRenderReports();
+            await fetchAndRenderReports();
           }
         } catch (err) {
           App.toast(err.message, 'error');
         } finally {
           btn.disabled = false;
+          btn.textContent = 'Lưu Kết quả Xét duyệt (Báo Zalo Bot)';
         }
       });
     });

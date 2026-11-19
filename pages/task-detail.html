@@ -4,12 +4,12 @@
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#0f2942">
   <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="QLCV & KPI">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Chi tiết Công việc & Báo cáo Nhiệm vụ</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-4">
 </head>
 <body>
   <div class="app-layout">
@@ -208,8 +208,8 @@
     </div>
   </div>
 
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/api.js?v=20261119-4"></script>
+  <script src="../assets/js/app.js?v=20261119-4"></script>
   <script src="../assets/js/tasks.js"></script>
   <script src="../assets/js/reports.js"></script>
   <script>
@@ -249,7 +249,6 @@
         ${TaskUI.renderStatusBadge(t.Status)}
       `;
 
-      // Cho phép người thực hiện (kể cả việc cá nhân PERSONAL) gửi báo cáo tiến độ để cấp trên xét duyệt
       const isMyPersonal = t.Task_Category === 'PERSONAL' && currentUserObj && String(t.Creator_ID) === String(currentUserObj.User_ID);
       if ((t.Is_Assignee || isMyPersonal) && t.Status !== 'COMPLETED' && t.Status !== 'CANCELLED') {
         document.getElementById('btn-show-quick-report').style.display = 'inline-block';
@@ -269,20 +268,26 @@
       if (t.Status === 'PENDING' && t.Is_Assignee) {
         btnsHtml += `<button class="btn btn-primary btn-sm" onclick="handleAcceptTask()">✋ Xác nhận Tiếp nhận</button>`;
       }
-      // Nút đôn đốc báo cáo dành cho SUPER_ADMIN và MANAGER quản lý cấp dưới
       if ((t.Can_Review || t.Can_Modify) && t.Status !== 'COMPLETED' && t.Status !== 'CANCELLED') {
         btnsHtml += `<button class="btn btn-outline btn-sm" onclick="handleRequestReportZalo()">📢 Đôn đốc báo cáo (Zalo)</button>`;
       }
       if (t.Can_Modify) {
-        if (t.Recurring_ID) {
-          btnsHtml += `<button class="btn btn-primary btn-sm" onclick="openScopeEditModal()">🔁 Sửa theo Phạm vi Chuỗi</button>`;
+        if (t.Status === 'CANCELLED' || t.Is_Deleted) {
+          btnsHtml += `
+            <a href="./task-create.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-outline btn-sm">✏️ Sửa</a>
+            <button class="btn btn-danger btn-sm" id="btn-del-perm" onclick="handleDeleteTaskPermanent()">🗑️ Xóa vĩnh viễn khỏi hệ thống</button>
+          `;
+        } else {
+          if (t.Recurring_ID) {
+            btnsHtml += `<button class="btn btn-primary btn-sm" onclick="openScopeEditModal()">🔁 Sửa theo Phạm vi Chuỗi</button>`;
+          }
+          btnsHtml += `
+            <a href="./task-create.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-outline btn-sm">✏️ Sửa</a>
+            <button class="btn btn-outline btn-sm" onclick="openExtendModal()">⏳ Gia hạn</button>
+            <button class="btn btn-outline btn-sm" onclick="openTransferModal()">🔄 Chuyển giao</button>
+            <button class="btn btn-danger btn-sm" onclick="handleCancelTask()">🚫 Hủy việc</button>
+          `;
         }
-        btnsHtml += `
-          <a href="./task-create.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-outline btn-sm">✏️ Sửa</a>
-          <button class="btn btn-outline btn-sm" onclick="openExtendModal()">⏳ Gia hạn</button>
-          <button class="btn btn-outline btn-sm" onclick="openTransferModal()">🔄 Chuyển giao</button>
-          <button class="btn btn-danger btn-sm" onclick="handleCancelTask()">🚫 Hủy việc</button>
-        `;
       }
       bar.innerHTML = btnsHtml;
 
@@ -413,6 +418,31 @@
       if (res.success) loadTaskDetail();
     };
 
+    window.handleDeleteTaskPermanent = async function() {
+      if (!confirm('Xác nhận XÓA VĨNH VIỄN nhiệm vụ đã hủy này khỏi toàn bộ hệ thống?\n(Mọi báo cáo, lịch sử và bản ghi của nhiệm vụ này sẽ bị xóa hoàn toàn và không thể khôi phục)')) return;
+      const btn = document.getElementById('btn-del-perm');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Đang xóa vĩnh viễn...';
+      }
+      try {
+        const res = await ApiClient.call('tasks.deletePermanent', { taskId: currentTaskId });
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) {
+          setTimeout(() => { window.location.href = './tasks.html'; }, 500);
+        } else if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🗑️ Xóa vĩnh viễn khỏi hệ thống';
+        }
+      } catch (err) {
+        App.toast(err.message, 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🗑️ Xóa vĩnh viễn khỏi hệ thống';
+        }
+      }
+    };
+
     window.openExtendModal = function() {
       document.getElementById('ext-date').value = taskDetailObj.Due_Date;
       document.getElementById('ext-time').value = taskDetailObj.Due_Time || '17:00';
@@ -433,7 +463,6 @@
 
       await loadTaskDetail();
 
-      // Ẩn/hiện khung chấm điểm khi đổi quyết định xét duyệt
       document.getElementById('ir-decision').addEventListener('change', (e) => {
         const isApp = e.target.value === 'APPROVED';
         document.getElementById('ir-score-box').style.display = isApp ? 'grid' : 'none';
@@ -445,7 +474,6 @@
         }
       });
 
-      // Xử lý gửi báo cáo nhanh tại chỗ
       document.getElementById('box-quick-report').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-submit-qr');
@@ -478,7 +506,6 @@
         }
       });
 
-      // Xử lý xét duyệt báo cáo ngay tại trang chi tiết (có khóa nút chống bấm đúp)
       document.getElementById('form-inline-review').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-submit-inline-review');
@@ -507,7 +534,6 @@
         }
       });
 
-      // Gửi bình luận trao đổi
       document.getElementById('form-comment').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-send-comment');
@@ -536,7 +562,6 @@
         }
       });
 
-      // Gia hạn
       document.getElementById('form-extend').addEventListener('submit', async (e) => {
         e.preventDefault();
         const res = await ApiClient.call('tasks.extend', {

@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<link rel="manifest" href="../manifest.json">
-<meta name="theme-color" content="#0f2942">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#0f2942">
   <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="QLCV & KPI">  <title>Quản lý Công việc & Nhiệm vụ Định kỳ</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
+  <title>Quản lý Công việc & Nhiệm vụ Định kỳ</title>
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261119-4">
 </head>
 <body>
   <div class="app-layout">
@@ -60,6 +61,7 @@
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <a href="./task-create.html" class="btn btn-primary">+ Tạo Công việc / Giao Nhiệm vụ</a>
                 <a href="./task-create.html?mode=recurring" class="btn btn-outline">🔁 + Tạo Chuỗi Định kỳ</a>
+                <button class="btn btn-danger btn-sm" id="btn-purge-cancelled" style="display: none;">🗑️ Xóa tất cả việc đã hủy (<span id="cnt-cancelled-purge">0</span>)</button>
                 <button class="btn btn-outline btn-sm" id="btn-toggle-trash">🗑️ Xem thùng rác</button>
               </div>
             </div>
@@ -315,8 +317,8 @@
     </div>
   </div>
 
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/app.js"></script>
+  <script src="../assets/js/api.js?v=20261119-4"></script>
+  <script src="../assets/js/app.js?v=20261119-4"></script>
   <script src="../assets/js/tasks.js"></script>
   <script>
     let viewingTrash = false;
@@ -379,6 +381,19 @@
       document.getElementById('st-confirm').textContent = sum.waitingConfirm || 0;
       document.getElementById('st-completed').textContent = sum.completed || 0;
       document.getElementById('st-overdue').textContent = sum.overdue || 0;
+      document.getElementById('list-card-title').textContent = viewingTrash
+        ? 'Thùng rác Công việc & Nhiệm vụ đã xóa mềm'
+        : 'Danh sách Công việc & Nhiệm vụ hiện hành';
+
+      // Hiện nút dọn sạch tất cả việc đã hủy nếu có ít nhất 1 nhiệm vụ đã hủy thuộc quyền xóa
+      const purgeBtn = document.getElementById('btn-purge-cancelled');
+      const purgeCount = Number(sum.cancelledDeletable) || 0;
+      if (!viewingTrash && purgeCount > 0) {
+        document.getElementById('cnt-cancelled-purge').textContent = purgeCount;
+        purgeBtn.style.display = 'inline-flex';
+      } else {
+        purgeBtn.style.display = 'none';
+      }
 
       const tbody = document.getElementById('tbody-tasks');
       if (currentTasks.length === 0) {
@@ -388,6 +403,8 @@
 
       tbody.innerHTML = currentTasks.map(t => {
         const recBadge = t.Recurring_ID ? `<span class="role-badge role-MANAGER" title="Mã chuỗi: ${App.escapeHtml(t.Recurring_ID)}">🔁 ${App.escapeHtml(t.Recurring_ID)}</span>` : '';
+        const canHardDelete = t.Can_Modify && (t.Status === 'CANCELLED' || viewingTrash);
+
         return `
           <tr>
             <td>
@@ -409,6 +426,12 @@
               <a href="./task-detail.html?id=${encodeURIComponent(t.Task_ID)}" class="btn btn-outline btn-sm">Chi tiết</a>
               ${!viewingTrash && t.Status === 'PENDING' && t.Primary_Assignee_ID === App.currentUser.User_ID ? `
                 <button class="btn btn-primary btn-sm" onclick="quickAccept('${App.escapeHtml(t.Task_ID)}')">Tiếp nhận</button>
+              ` : ''}
+              ${viewingTrash && t.Can_Modify ? `
+                <button class="btn btn-outline btn-sm" onclick="restoreTaskRow('${App.escapeHtml(t.Task_ID)}')">♻️ Khôi phục</button>
+              ` : ''}
+              ${canHardDelete ? `
+                <button class="btn btn-danger btn-sm" onclick="deleteTaskPermanentRow('${App.escapeHtml(t.Task_ID)}', this)">🗑️ Xóa hẳn</button>
               ` : ''}
             </td>
           </tr>
@@ -511,6 +534,36 @@
       if (res.success) fetchAndRenderTasks();
     };
 
+    window.restoreTaskRow = async function(taskId) {
+      const res = await ApiClient.call('tasks.restore', { taskId });
+      App.toast(res.message, res.success ? 'success' : 'error');
+      if (res.success) fetchAndRenderTasks();
+    };
+
+    window.deleteTaskPermanentRow = async function(taskId, btnEl) {
+      if (!confirm(`Xác nhận XÓA VĨNH VIỄN nhiệm vụ ${taskId} khỏi toàn bộ hệ thống?\n(Dữ liệu đã xóa sẽ không còn xuất hiện và không thể khôi phục)`)) return;
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = 'Đang xóa...';
+      }
+      try {
+        const res = await ApiClient.call('tasks.deletePermanent', { taskId });
+        App.toast(res.message, res.success ? 'success' : 'error');
+        if (res.success) {
+          fetchAndRenderTasks();
+        } else if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = '🗑️ Xóa hẳn';
+        }
+      } catch (err) {
+        App.toast(err.message, 'error');
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = '🗑️ Xóa hẳn';
+        }
+      }
+    };
+
     document.addEventListener('DOMContentLoaded', async () => {
       const user = await App.initProtectedPage('tasks', 'Quản lý Công việc & Nhiệm vụ Định kỳ');
       if (!user) return;
@@ -547,20 +600,38 @@
         fetchAndRenderTasks();
       });
 
-      // Chạy quét & sinh nhiệm vụ định kỳ ngay lập tức
+      // Dọn sạch hàng loạt toàn bộ nhiệm vụ đã hủy
+      document.getElementById('btn-purge-cancelled').addEventListener('click', async () => {
+        const cnt = document.getElementById('cnt-cancelled-purge').textContent;
+        if (!confirm(`Xác nhận XÓA VĨNH VIỄN toàn bộ ${cnt} nhiệm vụ ĐÃ HỦY khỏi hệ thống?\n(Mọi dữ liệu liên quan sẽ bị xóa sạch hoàn toàn và không thể khôi phục)`)) return;
+
+        const btn = document.getElementById('btn-purge-cancelled');
+        btn.disabled = true;
+        btn.textContent = 'Đang dọn sạch...';
+        try {
+          const res = await ApiClient.call('tasks.purgeCancelled', {}, { timeoutMs: 120000 });
+          App.toast(res.message, res.success ? 'success' : 'error');
+          await fetchAndRenderTasks();
+        } catch (err) {
+          App.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '🗑️ Xóa tất cả việc đã hủy (<span id="cnt-cancelled-purge">0</span>)';
+          await fetchAndRenderTasks();
+        }
+      });
+
       document.getElementById('btn-run-generator').addEventListener('click', async () => {
         const res = await ApiClient.call('recurring.generateDue', {});
         App.toast(res.message, res.success ? 'success' : 'error');
         if (res.success) fetchAndRenderRecurring();
       });
 
-      // Cài đặt Trigger tự động hằng ngày
       document.getElementById('btn-install-trigger').addEventListener('click', async () => {
         const res = await ApiClient.call('recurring.setupTrigger', {});
         App.toast(res.message, res.success ? 'success' : 'error');
       });
 
-      // Lưu chỉnh sửa chuỗi định kỳ
       document.getElementById('form-edit-recurring').addEventListener('submit', async (e) => {
         e.preventDefault();
         const res = await ApiClient.call('recurring.editScope', {
@@ -580,7 +651,6 @@
         }
       });
 
-      // Thêm ngày nghỉ lễ
       document.getElementById('form-holiday').addEventListener('submit', async (e) => {
         e.preventDefault();
         const res = await ApiClient.call('holidays.save', {

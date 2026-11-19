@@ -2,9 +2,12 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QLCV & KPI">
   <title>Danh mục Công việc & Đánh giá KPI</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/style.css?v=20261119">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#0f2942">
   <style>
@@ -250,8 +253,8 @@
   <!-- Thư viện đọc/xuất Excel hỗ trợ công thức sống + kẻ khung & Times New Roman -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/app.js"></script>
-  <script src="../assets/js/kpi-export.js"></script>
+  <script src="../assets/js/app.js?v=20261119"></script>
+  <script src="../assets/js/kpi-export.js?v=20261119"></script>
   <script>
     let currentData = null;
 
@@ -317,10 +320,12 @@
       if (!res.success) return App.toast(res.message, 'error');
 
       currentData = res.data;
-      (currentData.items || []).forEach(it => { it._selected = true; });
+      if (!currentData.summary) currentData.summary = {};
+      if (!Array.isArray(currentData.items)) currentData.items = [];
+      currentData.items.forEach(it => { it._selected = true; });
       updatePeriodBadge();
 
-      const s = currentData.summary || {};
+      const s = currentData.summary;
       document.getElementById('h-party-committee').value = s.Party_Committee || '';
       document.getElementById('h-party-cell').value = s.Party_Cell || '';
       document.getElementById('h-location').value = s.Location_Name || 'Quảng Trị';
@@ -344,12 +349,30 @@
     }
 
     function downloadImportTemplateBtn() {
-      if (!currentData) {
-        App.toast('Vui lòng đợi dữ liệu tải xong trước khi tải tệp mẫu.', 'error');
-        return;
+      try {
+        if (typeof XLSX === 'undefined') {
+          App.toast('Chưa tải xong thư viện Excel (xlsx-js-style). Hãy kiểm tra kết nối mạng và tải lại trang.', 'error');
+          return;
+        }
+        const safeData = currentData || {
+          periodMonth: document.getElementById('f-month').value || '',
+          periodLabel: 'THÁNG',
+          user: { User_ID: 'MAU', Full_Name: '', Position: '' },
+          summary: {
+            Party_Committee: document.getElementById('h-party-committee').value.trim(),
+            Party_Cell: document.getElementById('h-party-cell').value.trim(),
+            Location_Name: document.getElementById('h-location').value.trim() || 'Quảng Trị',
+            Secretary_Name: document.getElementById('h-secretary').value.trim()
+          }
+        };
+        if (currentData) syncHeaderInputs();
+
+        KpiExporter.downloadPlanImportTemplate(safeData);
+        App.toast('Đang tải tệp Excel mẫu nhập danh mục công việc...', 'success');
+      } catch (err) {
+        console.error('Lỗi tải Excel mẫu:', err);
+        App.toast('Lỗi tạo tệp Excel mẫu: ' + err.message, 'error');
       }
-      syncHeaderInputs();
-      KpiExporter.downloadPlanImportTemplate(currentData);
     }
 
     async function handleImportPlanExcel(event) {
@@ -664,6 +687,7 @@
 
     function syncHeaderInputs() {
       if (!currentData) return;
+      if (!currentData.summary) currentData.summary = {};
       currentData.summary.Party_Committee = document.getElementById('h-party-committee').value.trim();
       currentData.summary.Party_Cell = document.getElementById('h-party-cell').value.trim();
       currentData.summary.Location_Name = document.getElementById('h-location').value.trim();
@@ -706,6 +730,7 @@
           currentData.items.forEach(it => { if (it.Task_ID) prevSel[it.Task_ID] = it._selected; });
           const createdCount = res.data.createdCount || 0;
           currentData = res.data;
+          if (!currentData.summary) currentData.summary = {};
           currentData.items.forEach(it => { it._selected = prevSel[it.Task_ID] !== false; });
           updatePeriodBadge();
           renderPlanTable();
@@ -727,22 +752,32 @@
     }
 
     function exportPlan(format) {
-      if (!currentData) return;
-      const selected = getSelectedItems();
-      if (!selected.length) return App.toast('Vui lòng nhập và tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
-      syncHeaderInputs();
-      if (format === 'EXCEL') KpiExporter.exportPlanExcel(currentData, selected);
-      else KpiExporter.exportPlanWord(currentData, selected);
+      try {
+        if (!currentData) return;
+        const selected = getSelectedItems();
+        if (!selected.length) return App.toast('Vui lòng nhập và tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
+        syncHeaderInputs();
+        if (format === 'EXCEL') KpiExporter.exportPlanExcel(currentData, selected);
+        else KpiExporter.exportPlanWord(currentData, selected);
+      } catch (err) {
+        console.error('Lỗi xuất Mẫu 1:', err);
+        App.toast('Lỗi xuất file Mẫu 1: ' + err.message, 'error');
+      }
     }
 
     function exportKpi(format) {
-      if (!currentData) return;
-      const selected = getSelectedItems();
-      if (!selected.length) return App.toast('Vui lòng nhập và tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
-      syncHeaderInputs();
-      const calc = computeKpiSummary();
-      if (format === 'EXCEL') KpiExporter.exportKpiExcel(currentData, selected, calc);
-      else KpiExporter.exportKpiWord(currentData, selected, calc);
+      try {
+        if (!currentData) return;
+        const selected = getSelectedItems();
+        if (!selected.length) return App.toast('Vui lòng nhập và tích chọn ít nhất 1 nhiệm vụ để xuất file.', 'error');
+        syncHeaderInputs();
+        const calc = computeKpiSummary();
+        if (format === 'EXCEL') KpiExporter.exportKpiExcel(currentData, selected, calc);
+        else KpiExporter.exportKpiWord(currentData, selected, calc);
+      } catch (err) {
+        console.error('Lỗi xuất Mẫu 2:', err);
+        App.toast('Lỗi xuất file Mẫu 2: ' + err.message, 'error');
+      }
     }
   </script>
 </body>

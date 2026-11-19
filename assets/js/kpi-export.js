@@ -2,7 +2,7 @@
  * TỆP: assets/js/kpi-export.js
  * CHỨC NĂNG:
  *  1. Xuất tệp Word (.doc) khổ A4 ngang và Excel (.xlsx) có công thức sống cho Mẫu 1 & Mẫu 2.
- *  2. Tải tệp Excel mẫu nhập liệu chuẩn 10 cột Danh mục sản phẩm/công việc.
+ *  2. Tải tệp Excel mẫu nhập liệu chuẩn 10 cột Danh mục sản phẩm/công việc (hỗ trợ PC, Android, iPhone).
  *  3. Đọc & phân tích tệp Excel (.xlsx/.xls) tải lên để tự động nạp danh sách nhiệm vụ vào KPI.
  */
 
@@ -19,8 +19,21 @@ const KpiExporter = {
   },
 
   safeFileSuffix(data) {
-    const pKey = String(data.periodKey || data.periodMonth || 'KPI').replace(/[^a-zA-Z0-9_-]/g, '_');
-    return `${pKey}_${data.user.User_ID}`;
+    const pKey = String((data && (data.periodKey || data.periodMonth)) || 'KPI').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const uid = (data && data.user && data.user.User_ID) ? data.user.User_ID : 'MAU';
+    return `${pKey}_${uid}`;
+  },
+
+  _triggerBlobDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   },
 
   /* =========================================================================
@@ -28,9 +41,10 @@ const KpiExporter = {
    * ========================================================================= */
   buildCommonHeaderHtml(summary, titleText, fullName, position) {
     const now = new Date();
-    const partyCommittee = this.esc(summary.Party_Committee || '.....................');
-    const partyCell = this.esc(summary.Party_Cell || '...............');
-    const loc = this.esc(summary.Location_Name || 'Quảng Trị');
+    const s = summary || {};
+    const partyCommittee = this.esc(s.Party_Committee || '.....................');
+    const partyCell = this.esc(s.Party_Cell || '...............');
+    const loc = this.esc(s.Location_Name || 'Quảng Trị');
 
     return `
       <table style="width:100%; border:none; border-collapse:collapse; margin-bottom:10pt;">
@@ -57,12 +71,14 @@ const KpiExporter = {
   },
 
   exportPlanWord(data, selectedItems) {
-    const label = data.periodLabel || `THÁNG ${data.periodMonth || '...'}`;
+    const user = (data && data.user) || {};
+    const summary = (data && data.summary) || {};
+    const label = (data && (data.periodLabel || `THÁNG ${data.periodMonth || '...'}`)) || 'THÁNG ...';
     const headerHtml = this.buildCommonHeaderHtml(
-      data.summary,
+      summary,
       `XÂY DỰNG DANH MỤC SẢN PHẨM/CÔNG VIỆC ${label}`,
-      data.user.Full_Name,
-      data.user.Position
+      user.Full_Name,
+      user.Position
     );
 
     const rowsHtml = (selectedItems || []).map((item, idx) => `
@@ -106,13 +122,13 @@ const KpiExporter = {
           <td style="width:50%; text-align:center; vertical-align:top; border:none; font-size:12pt;">
             <div style="font-weight:bold;">NGƯỜI LẬP</div>
             <div style="height:55pt;"></div>
-            <div style="font-weight:bold;">${this.esc(data.user.Full_Name)}</div>
+            <div style="font-weight:bold;">${this.esc(user.Full_Name)}</div>
           </td>
           <td style="width:50%; text-align:center; vertical-align:top; border:none; font-size:12pt;">
             <div style="font-weight:bold;">T/M CẤP ỦY (CHI BỘ)</div>
             <div>BÍ THƯ</div>
             <div style="height:45pt;"></div>
-            <div style="font-weight:bold;">${this.esc(data.summary.Secretary_Name || '................................')}</div>
+            <div style="font-weight:bold;">${this.esc(summary.Secretary_Name || '................................')}</div>
           </td>
         </tr>
       </table>
@@ -122,12 +138,14 @@ const KpiExporter = {
   },
 
   exportKpiWord(data, selectedItems, calc) {
-    const label = data.periodLabel || `THÁNG ${data.periodMonth || '...'}`;
+    const user = (data && data.user) || {};
+    const summary = (data && data.summary) || {};
+    const label = (data && (data.periodLabel || `THÁNG ${data.periodMonth || '...'}`)) || 'THÁNG ...';
     const headerHtml = this.buildCommonHeaderHtml(
-      data.summary,
+      summary,
       `BIỂU TÍNH ĐIỂM THEO CHỈ SỐ ĐÁNH GIÁ HIỆU QUẢ CÔNG VIỆC (KPI) CÁ NHÂN ${label}`,
-      data.user.Full_Name,
-      data.user.Position
+      user.Full_Name,
+      user.Position
     );
 
     const rowsHtml = (selectedItems || []).map((item, idx) => {
@@ -242,7 +260,7 @@ const KpiExporter = {
             <td style="width:40%; text-align:center; border:none;">
               <div style="font-weight:bold; font-size:12pt;">NGƯỜI LẬP</div>
               <div style="height:50pt;"></div>
-              <div style="font-weight:bold; font-size:12pt;">${this.esc(data.user.Full_Name)}</div>
+              <div style="font-weight:bold; font-size:12pt;">${this.esc(user.Full_Name)}</div>
             </td>
           </tr>
         </table>
@@ -279,11 +297,7 @@ const KpiExporter = {
       </html>
     `;
     const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
+    this._triggerBlobDownload(blob, filename);
   },
 
   /* =========================================================================
@@ -312,15 +326,23 @@ const KpiExporter = {
     }
   },
 
+  _downloadWorkbook(wb, filename) {
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    this._triggerBlobDownload(blob, filename);
+  },
+
   exportPlanExcel(data, selectedItems, customFilename) {
     if (typeof XLSX === 'undefined') {
-      alert('Chưa tải được thư viện xuất Excel. Vui lòng kiểm tra kết nối mạng.');
-      return;
+      throw new Error('Chưa tải được thư viện xuất Excel. Vui lòng kiểm tra kết nối mạng.');
     }
 
-    const label = data.periodLabel || `THÁNG ${data.periodMonth || '...'}`;
+    const user = (data && data.user) || {};
+    const s = (data && data.summary) || {};
+    const label = (data && (data.periodLabel || `THÁNG ${data.periodMonth || '...'}`)) || 'THÁNG ...';
     const now = new Date();
-    const s = data.summary || {};
     const ws = {};
     const merges = [];
     const fontBase = { name: 'Times New Roman', sz: 11 };
@@ -331,8 +353,8 @@ const KpiExporter = {
     this._setCell(ws, 1, 5, { t: 's', v: `${s.Location_Name || 'Quảng Trị'}, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`, s: { font: { ...fontBase, sz: 12, italic: true }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, 2, 0, { t: 's', v: '*', s: { font: { ...fontBase, sz: 12 }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, 3, 0, { t: 's', v: `XÂY DỰNG DANH MỤC SẢN PHẨM/CÔNG VIỆC ${label}`, s: { font: { ...fontBase, sz: 13, bold: true }, alignment: { horizontal: 'center' } } });
-    this._setCell(ws, 4, 1, { t: 's', v: `Họ và tên: ${data.user.Full_Name || ''}`, s: { font: { ...fontBase, sz: 12 } } });
-    this._setCell(ws, 5, 1, { t: 's', v: `Chức vụ: ${data.user.Position || ''}`, s: { font: { ...fontBase, sz: 12 } } });
+    this._setCell(ws, 4, 1, { t: 's', v: `Họ và tên: ${user.Full_Name || ''}`, s: { font: { ...fontBase, sz: 12 } } });
+    this._setCell(ws, 5, 1, { t: 's', v: `Chức vụ: ${user.Position || ''}`, s: { font: { ...fontBase, sz: 12 } } });
 
     merges.push(
       { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, { s: { r: 0, c: 5 }, e: { r: 0, c: 9 } },
@@ -379,7 +401,7 @@ const KpiExporter = {
     this._setCell(ws, sigRow, 0, { t: 's', v: 'NGƯỜI LẬP', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, sigRow, 5, { t: 's', v: 'T/M CẤP ỦY (CHI BỘ)', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, sigRow + 1, 5, { t: 's', v: 'BÍ THƯ', s: { font: { ...fontBase, sz: 12 }, alignment: { horizontal: 'center' } } });
-    this._setCell(ws, sigRow + 5, 0, { t: 's', v: data.user.Full_Name || '', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
+    this._setCell(ws, sigRow + 5, 0, { t: 's', v: user.Full_Name || '', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, sigRow + 5, 5, { t: 's', v: s.Secretary_Name || '..............................', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
 
     merges.push(
@@ -398,7 +420,7 @@ const KpiExporter = {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'DanhMucCongViec');
-    XLSX.writeFile(wb, customFilename || `Danh_Muc_Cong_Viec_${this.safeFileSuffix(data)}.xlsx`);
+    this._downloadWorkbook(wb, customFilename || `Danh_Muc_Cong_Viec_${this.safeFileSuffix(data)}.xlsx`);
   },
 
   /**
@@ -434,13 +456,13 @@ const KpiExporter = {
 
   exportKpiExcel(data, selectedItems, calc) {
     if (typeof XLSX === 'undefined') {
-      alert('Chưa tải được thư viện xuất Excel. Vui lòng kiểm tra kết nối mạng.');
-      return;
+      throw new Error('Chưa tải được thư viện xuất Excel. Vui lòng kiểm tra kết nối mạng.');
     }
 
-    const label = data.periodLabel || `THÁNG ${data.periodMonth || '...'}`;
+    const user = (data && data.user) || {};
+    const s = (data && data.summary) || {};
+    const label = (data && (data.periodLabel || `THÁNG ${data.periodMonth || '...'}`)) || 'THÁNG ...';
     const now = new Date();
-    const s = data.summary || {};
     const ws = {};
     const merges = [];
     const fontBase = { name: 'Times New Roman', sz: 10 };
@@ -452,8 +474,8 @@ const KpiExporter = {
     this._setCell(ws, 1, 7, { t: 's', v: `${s.Location_Name || 'Quảng Trị'}, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`, s: { font: { ...fontBase, sz: 12, italic: true }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, 2, 0, { t: 's', v: '*', s: { font: { ...fontBase, sz: 12 }, alignment: { horizontal: 'center' } } });
     this._setCell(ws, 3, 0, { t: 's', v: `BIỂU TÍNH ĐIỂM THEO CHỈ SỐ ĐÁNH GIÁ HIỆU QUẢ CÔNG VIỆC (KPI) CÁ NHÂN ${label}`, s: { font: { ...fontBase, sz: 13, bold: true }, alignment: { horizontal: 'center' } } });
-    this._setCell(ws, 4, 1, { t: 's', v: `Họ và tên: ${data.user.Full_Name || ''}`, s: { font: { ...fontBase, sz: 11 } } });
-    this._setCell(ws, 5, 1, { t: 's', v: `Chức vụ: ${data.user.Position || ''}`, s: { font: { ...fontBase, sz: 11 } } });
+    this._setCell(ws, 4, 1, { t: 's', v: `Họ và tên: ${user.Full_Name || ''}`, s: { font: { ...fontBase, sz: 11 } } });
+    this._setCell(ws, 5, 1, { t: 's', v: `Chức vụ: ${user.Position || ''}`, s: { font: { ...fontBase, sz: 11 } } });
 
     merges.push(
       { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, { s: { r: 0, c: 7 }, e: { r: 0, c: 15 } },
@@ -600,7 +622,7 @@ const KpiExporter = {
 
     const sigIdx = fStart + 9;
     this._setCell(ws, sigIdx, 10, { t: 's', v: 'NGƯỜI LẬP', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
-    this._setCell(ws, sigIdx + 4, 10, { t: 's', v: data.user.Full_Name || '', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
+    this._setCell(ws, sigIdx + 4, 10, { t: 's', v: user.Full_Name || '', s: { font: { ...fontBase, sz: 12, bold: true }, alignment: { horizontal: 'center' } } });
     merges.push(
       { s: { r: sigIdx, c: 10 }, e: { r: sigIdx, c: 15 } },
       { s: { r: sigIdx + 4, c: 10 }, e: { r: sigIdx + 4, c: 15 } }
@@ -619,7 +641,7 @@ const KpiExporter = {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'BieuKPI_CaNhan');
-    XLSX.writeFile(wb, `Bieu_KPI_Ca_Nhan_${this.safeFileSuffix(data)}.xlsx`);
+    this._downloadWorkbook(wb, `Bieu_KPI_Ca_Nhan_${this.safeFileSuffix(data)}.xlsx`);
   },
 
   /* =========================================================================
@@ -642,7 +664,6 @@ const KpiExporter = {
 
   _formatCellTextOrDate(val) {
     if (val === undefined || val === null || val === '') return '';
-    // Nếu ô Excel là số ngày serial (VD: 46345)
     if (typeof val === 'number' && val > 35000 && val < 65000 && XLSX.SSF && XLSX.SSF.parse_date_code) {
       const d = XLSX.SSF.parse_date_code(val);
       if (d && d.y && d.m && d.d) {
@@ -735,7 +756,7 @@ const KpiExporter = {
 
           // 3. Duyệt từng dòng dữ liệu nhiệm vụ
           const startIdx = headerRowIdx !== -1 ? headerRowIdx + 1 : 0;
-          const stopKeywords = ['người lập', 'nguoi lap', 't/m cấp ủy', 'tm cấp ủy', 'bí thư', 'bi thu', 'tổng cộng', 'tong cong', 'tổng %'];
+          const stopKeywords = ['người lập', 'nguoi lap', 't/m cấp ủy', 'tm cấp ủy', 'tổng cộng', 'tong cong', 'tổng %'];
           const parsedItems = [];
 
           for (let r = startIdx; r < rows.length; r++) {

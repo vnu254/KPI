@@ -1,21 +1,25 @@
 {
-  "name": "Quản lý Công việc Nội bộ",
+  "name": "Quản lý Công việc & KPI Nội bộ",
   "short_name": "QL Công Việc",
-  "description": "Hệ thống quản lý công việc và báo cáo tiến độ nội bộ",
+  "description": "Hệ thống quản lý công việc, báo cáo tiến độ và đánh giá KPI nội bộ",
   "start_url": "./dashboard.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f8fafc",
+  "orientation": "any",
+  "background_color": "#0f2942",
   "theme_color": "#0f2942",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1087/1087815.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/1087/1087815.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
